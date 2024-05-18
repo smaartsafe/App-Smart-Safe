@@ -1,4 +1,4 @@
-package com.teste
+package com.yourcompany.yourappname
 
 import android.app.Application
 import android.content.res.Configuration
