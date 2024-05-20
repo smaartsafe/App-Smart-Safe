@@ -153,7 +153,7 @@ const App = () => {
     <NavigationContainer>
       <StatusBar
         barStyle="#fff"
-        backgroundColor={"#0006"}
+        backgroundColor={"#0008"}
         hidden={false}
         translucent={true}
         networkActivityIndicatorVisible={true}

@@ -12,8 +12,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as Contacts from "expo-contacts";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { getDatabase, ref, set } from "firebase/database";
+import { getDatabase, ref, set, get } from "firebase/database";
 import { getAuth } from "firebase/auth";
 import * as SMS from "expo-sms";
 
@@ -47,13 +46,14 @@ const AdicionarContatoScreen = () => {
     };
 
     requestContactsPermission();
-    loadContacts();
     fetchUserId(); // Obter o ID do usuário ao carregar o componente
   }, []);
 
   useEffect(() => {
-    saveContacts();
-  }, [addedContacts]);
+    if (userId) {
+      loadContactsFromDatabase();
+    }
+  }, [userId]);
 
   const fetchUserId = () => {
     const auth = getAuth();
@@ -82,25 +82,16 @@ const AdicionarContatoScreen = () => {
     }
   };
 
-  const loadContacts = async () => {
+  const loadContactsFromDatabase = async () => {
     try {
-      const savedContacts = await AsyncStorage.getItem("addedContacts");
-      if (savedContacts !== null) {
-        setAddedContacts(JSON.parse(savedContacts));
+      const db = getDatabase();
+      const contactsRef = ref(db, `Contatos/${userId}`);
+      const snapshot = await get(contactsRef);
+      if (snapshot.exists()) {
+        setAddedContacts(snapshot.val());
       }
     } catch (error) {
-      console.error("Error loading contacts:", error);
-    }
-  };
-
-  const saveContacts = async () => {
-    try {
-      await AsyncStorage.setItem(
-        "addedContacts",
-        JSON.stringify(addedContacts)
-      );
-    } catch (error) {
-      console.error("Error saving contacts:", error);
+      console.error("Error loading contacts from database:", error);
     }
   };
 
@@ -198,18 +189,17 @@ const AdicionarContatoScreen = () => {
     const updatedContact = { ...contact, favorited: !contact.favorited };
   
     // Desfavoritar todos os contatos
-    const updatedContacts = addedContacts.map((c) => ({ ...c, favorited: false }));
-    
-    // Favoritar o contato selecionado
-    updatedContacts[contactIndex] = updatedContact;
+    const updatedContacts = addedContacts.map((c, index) => ({
+      ...c,
+      favorited: index === contactIndex ? !c.favorited : false,
+    }));
   
     // Atualiza o estado local
     setAddedContacts(updatedContacts);
   
-    // Envia o contato atualizado para o banco de dados
-    sendContactToDatabase(updatedContact);
+    // Envia os contatos atualizados para o banco de dados
+    sendContactsToDatabase(updatedContacts);
   };
-  
 
   const renderAddedContactItem = ({ item, index }) => (
     <View style={styles.contactContainer}>
@@ -222,11 +212,7 @@ const AdicionarContatoScreen = () => {
         )}
         <View style={styles.contactActions}>
           <Ionicons
-            name={
-              favoritedContact && favoritedContact.id === item.id
-                ? "star"
-                : "star"
-            }
+            name={item.favorited ? "star" : "star-outline"}
             size={24}
             color={item.favorited ? "#FFD700" : "#ccc"}
             onPress={() => toggleFavorite(index)}
@@ -371,8 +357,10 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingVertical: 15,
-    borderBottomColor: "#ccc",
     paddingHorizontal: 10,
+    borderRadius: 10,
+    borderBottomWidth: 1,
+    borderColor: 'white',
   },
   contactName: {
     fontSize: 16,
