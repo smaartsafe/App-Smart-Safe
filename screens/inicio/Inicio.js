@@ -32,17 +32,23 @@ const Inicio = () => {
           );
           return;
         }
-
-        let location = await Location.getCurrentPositionAsync({});
+  
+        let location = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Highest,
+        });
         setUserLocation(location);
-
+        
         let addressResponse = await Location.reverseGeocodeAsync({
           latitude: location.coords.latitude,
           longitude: location.coords.longitude,
         });
-
-        setAddress(addressResponse[0]);
-
+  
+        if (addressResponse && addressResponse.length > 0) {
+          setAddress(addressResponse[0]);
+        } else {
+          console.error('Nenhum endereço encontrado para as coordenadas fornecidas.');
+        }
+  
         console.log('Localização do usuário:', location);
         console.log('Endereço:', addressResponse[0]);
       } catch (error) {
@@ -50,6 +56,7 @@ const Inicio = () => {
       }
     })();
   }, []);
+  
 
   useEffect(() => {
     (async () => {
