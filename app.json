@@ -2,7 +2,7 @@
   "expo": {
     "name": "Smart Safe",
     "slug": "smart-safe",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./src/assets/Logo-Atual.png",
     "userInterfaceStyle": "light",
@@ -29,12 +29,7 @@
         "foregroundImage": "./src/assets/Logo-Atual.png",
         "backgroundColor": "#3c0c7b"
       },
-      "package": "com.yourcompany.yourappname",
-      "config": {
-        "googleMaps": {
-          "apiKey": "AIzaSyDvHfMvLMgqaQADb5TyDpbdNuiNjDuKpm0"
-        }
-      }
+      "package": "com.yourcompany.yourappname"
     },
     "web": {
       "favicon": "./src/assets/Logo-Atual.png"
@@ -52,6 +47,10 @@
       "eas": {
         "projectId": "c39512a2-25d1-494e-a922-f5016dbc7b97"
       }
+    },
+    "runtimeVersion": "1.0.1",
+    "updates": {
+      "url": "https://u.expo.dev/c39512a2-25d1-494e-a922-f5016dbc7b97"
     }
   }
 }
