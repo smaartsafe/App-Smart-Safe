@@ -4,7 +4,7 @@
     "slug": "smart-safe",
     "version": "1.0.1",
     "orientation": "portrait",
-    "icon": "",
+    "icon": "./src/assets/Logo-Atual.png",
     "userInterfaceStyle": "light",
     "splash": {
       "image": "./src/assets/FundoSplashOriginal.png",
