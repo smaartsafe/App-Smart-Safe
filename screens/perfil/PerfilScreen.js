@@ -8,6 +8,7 @@ import {
   Image,
   Alert,
   ActivityIndicator,
+  Linking,
 } from "react-native";
 import { getDatabase, get, ref, child, update } from "firebase/database";
 import { getAuth, signOut } from "firebase/auth";
@@ -21,12 +22,14 @@ import {
 } from "firebase/storage";
 import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
+import * as Location from "expo-location";
 
 const Perfil = ({ navigation }) => {
   const [perfilData, setPerfilData] = useState(null);
   const [image, setImage] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [uploaded, setUploaded] = useState(false);
+  const [loadingMap, setLoadingMap] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -149,10 +152,6 @@ const Perfil = ({ navigation }) => {
     }
   };
 
-  const handleGoToMap = () => {
-    navigation.navigate("MapScreen");
-  };
-
   const handleDataUser = () => {
     navigation.navigate("Dados do Usúario");
   };
@@ -175,6 +174,46 @@ const Perfil = ({ navigation }) => {
       }
     } catch (error) {
       console.error("Erro ao fazer logout:", error);
+    }
+  };
+
+  const getLocationCoordinates = async () => {
+    try {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        throw new Error("Permissão de localização não concedida");
+      }
+
+      let location = await Location.getCurrentPositionAsync({});
+      return {
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+      };
+    } catch (error) {
+      console.error("Erro ao obter coordenadas do usuário:", error);
+      throw error; // Lança o erro para ser tratado onde a função for chamada
+    }
+  };
+
+  const handleGoToMap = async () => {
+    try {
+      setLoadingMap(true); // Define loadingMap como true antes de começar a carregar o mapa
+      const coords = await getLocationCoordinates();
+      const { latitude, longitude } = coords;
+      if (latitude && longitude) {
+        const url = `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
+        await Linking.openURL(url);
+      } else {
+        Alert.alert(
+          "Coordenadas não encontradas",
+          "Não foi possível obter as coordenadas do usuário."
+        );
+      }
+    } catch (error) {
+      console.error("Erro ao abrir o Google Maps:", error);
+      Alert.alert("Erro", "Não foi possível abrir o Google Maps.");
+    } finally {
+      setLoadingMap(false); // Define loadingMap como false após o mapa ser carregado ou ocorrer um erro
     }
   };
 
@@ -231,9 +270,12 @@ const Perfil = ({ navigation }) => {
         <TouchableOpacity
           onPress={handleGoToMap}
           style={[styles.button, { backgroundColor: "#4CAF50" }]}
+          disabled={loadingMap} // Desativa a interação do botão quando loadingMap for true
         >
           <Icon name="map" size={20} color="white" />
-          <Text style={styles.buttonText}>Ir para o Mapa</Text>
+          <Text style={styles.buttonText}>
+            {loadingMap ? "Carregando o mapa..." : "Ir para o Mapa"}
+          </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
