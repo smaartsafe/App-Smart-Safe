@@ -191,11 +191,13 @@ const Inicio = () => {
     try {
       const db = getDatabase();
       const usersSnapshot = await get(ref(db, 'Contatos')); // Obtém todos os usuários
-  
+      
+      let favoritedContactFound = false; // Flag para indicar se um contato favorito foi encontrado
+      
       usersSnapshot.forEach((userSnapshot) => {
         userSnapshot.forEach((contactSnapshot) => { // Itera sobre os contatos de cada usuário
           const contact = contactSnapshot.val();
-  
+          
           if (contact.favorited === true) {
             const phoneNumber = contact.phoneNumber;
             
@@ -208,20 +210,29 @@ const Inicio = () => {
               const message = `Socorro! Estou em uma situação de emergência e preciso de ajuda urgente! Por favor, clique no link abaixo para ver minha localização atual e me encontrar o mais rápido possível: ${mapsLink}`;
               const url = `whatsapp://send?phone=${phoneNumber}&text=${encodeURIComponent(message)}`;
               Linking.openURL(url);
+              
+              favoritedContactFound = true; // Define a flag como verdadeira após encontrar um contato favorito
+              
+              // Se quiser parar após o primeiro contato favoritado encontrado, pode usar "return true;" aqui
             } else {
               console.error('Localização não disponível');
               Alert.alert('Erro ao enviar a mensagem: Localização não disponível.');
             }
-            
-            // Se quiser parar após o primeiro contato favoritado encontrado, pode usar "return true;" aqui
           }
         });
       });
+      
+      // Se nenhum contato favorito foi encontrado, exiba uma mensagem
+      if (!favoritedContactFound) {
+        console.error('Nenhum contato favorito encontrado');
+        Alert.alert('Nenhum contato favorito encontrado.');
+      }
     } catch (error) {
       console.error('Erro ao acionar o contato de emergência:', error);
       Alert.alert('Erro ao acionar o contato de emergência. Por favor, tente novamente mais tarde.');
     }
   };
+  
   
 return (
   <View style={styles.container}>

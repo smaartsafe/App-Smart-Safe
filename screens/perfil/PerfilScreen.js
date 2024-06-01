@@ -9,6 +9,8 @@ import {
   Alert,
   ActivityIndicator,
   Linking,
+  Modal,
+  Pressable,
 } from "react-native";
 import { getDatabase, get, ref, child, update } from "firebase/database";
 import { getAuth, signOut } from "firebase/auth";
@@ -30,6 +32,7 @@ const Perfil = ({ navigation }) => {
   const [uploading, setUploading] = useState(false);
   const [uploaded, setUploaded] = useState(false);
   const [loadingMap, setLoadingMap] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -67,7 +70,6 @@ const Perfil = ({ navigation }) => {
         const snapshot = await get(child(dbref, `users/${user.uid}`));
         if (snapshot.exists()) {
           const userData = snapshot.val();
-          // console.log("Dados do usuário:", userData);
           setPerfilData(userData);
           navigation.navigate("Perfil", { perfilData: userData });
         } else {
@@ -92,52 +94,62 @@ const Perfil = ({ navigation }) => {
       if (!result.cancelled) {
         console.log(result.assets[0].uri);
         setImage(result.assets[0].uri);
+        await uploadImage(result.assets[0].uri); // Chama a função de upload diretamente
       }
     } catch (E) {
       console.log(E);
     }
   };
-
-  const uploadImage = async () => {
+  
+  const takePhoto = async () => {
     try {
-      if (!image) return;
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 1,
+      });
+      if (!result.cancelled) {
+        setImage(result.assets[0].uri);
+        await uploadImage(result.assets[0].uri); // Chama a função de upload diretamente
+      }
+    } catch (error) {
+      console.error("Error taking photo:", error);
+    }
+  };
+  
+  const uploadImage = async (uri) => {
+    try {
+      if (!uri) return;
       setUploading(true);
-
+  
       const auth = getAuth();
       const user = auth.currentUser;
       const storage = getStorage();
       const storageRef = sRef(storage, "fotos/" + Date.now() + user.uid);
-      const response = await fetch(image);
+      const response = await fetch(uri);
       const blob = await response.blob();
-
+  
       const uploadTask = uploadBytesResumable(storageRef, blob);
-
+  
       uploadTask.on(
         "state_changed",
         (snapshot) => {
-          // Handle progress
           const progress =
             (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
           console.log("Upload is " + progress + "% done");
         },
         (error) => {
-          // Handle error
           console.error("Error uploading image:", error);
           setUploading(false);
         },
         () => {
-          // Handle successful upload
-          const auth = getAuth();
-          const user = auth.currentUser;
-          const database = getDatabase();
-
           getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
             console.log("File available at", downloadURL);
-            update(ref(database, `users/${user.uid}`), { foto: downloadURL })
+            update(ref(getDatabase(), `users/${user.uid}`), { foto: downloadURL })
               .then(() => {
                 setUploading(false);
                 setUploaded(true);
-                fetchUserProfile(); // Atualiza os dados do perfil após a atualização
+                fetchUserProfile();
               })
               .catch((error) => {
                 console.error("Error updating user data:", error);
@@ -151,6 +163,7 @@ const Perfil = ({ navigation }) => {
       setUploading(false);
     }
   };
+  
 
   const handleDataUser = () => {
     navigation.navigate("Dados do Usúario");
@@ -176,6 +189,10 @@ const Perfil = ({ navigation }) => {
       console.error("Erro ao fazer logout:", error);
     }
   };
+  const removePhoto = () => {
+    setImage(null);
+    setPerfilData((prevData) => ({ ...prevData, foto: "" }));
+  };
 
   const getLocationCoordinates = async () => {
     try {
@@ -191,13 +208,13 @@ const Perfil = ({ navigation }) => {
       };
     } catch (error) {
       console.error("Erro ao obter coordenadas do usuário:", error);
-      throw error; // Lança o erro para ser tratado onde a função for chamada
+      throw error;
     }
   };
 
   const handleGoToMap = async () => {
     try {
-      setLoadingMap(true); // Define loadingMap como true antes de começar a carregar o mapa
+      setLoadingMap(true);
       const coords = await getLocationCoordinates();
       const { latitude, longitude } = coords;
       if (latitude && longitude) {
@@ -213,14 +230,14 @@ const Perfil = ({ navigation }) => {
       console.error("Erro ao abrir o Google Maps:", error);
       Alert.alert("Erro", "Não foi possível abrir o Google Maps.");
     } finally {
-      setLoadingMap(false); // Define loadingMap como false após o mapa ser carregado ou ocorrer um erro
+      setLoadingMap(false);
     }
   };
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.profileContainer}>
-        <TouchableOpacity onPress={pickImage}>
+        <TouchableOpacity onPress={() => setModalVisible(true)}>
           <Image
             source={{
               uri:
@@ -239,11 +256,6 @@ const Perfil = ({ navigation }) => {
             }}
           />
         </TouchableOpacity>
-        {image && !uploaded && (
-          <TouchableOpacity onPress={uploadImage} style={styles.enviarFoto}>
-            <Text style={styles.textEnviarFoto}>CONCLUIR</Text>
-          </TouchableOpacity>
-        )}
         {uploading && <ActivityIndicator />}
         {perfilData == null ? (
           <ActivityIndicator />
@@ -270,7 +282,7 @@ const Perfil = ({ navigation }) => {
         <TouchableOpacity
           onPress={handleGoToMap}
           style={[styles.button, { backgroundColor: "#4CAF50" }]}
-          disabled={loadingMap} // Desativa a interação do botão quando loadingMap for true
+          disabled={loadingMap}
         >
           <Icon name="map" size={20} color="white" />
           <Text style={styles.buttonText}>
@@ -286,6 +298,53 @@ const Perfil = ({ navigation }) => {
           <Text style={styles.buttonText}>Sair da conta</Text>
         </TouchableOpacity>
       </View>
+
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => {
+          setModalVisible(!modalVisible);
+        }}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalView}>
+            <Pressable
+              style={[styles.modalButton, styles.buttonClose]}
+              onPress={() => {
+                takePhoto();
+                setModalVisible(!modalVisible);
+              }}
+            >
+              <Text style={styles.textStyle}>Tirar Foto Agora</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.modalButton, styles.buttonClose]}
+              onPress={() => {
+                pickImage();
+                setModalVisible(!modalVisible);
+              }}
+            >
+              <Text style={styles.textStyle}>Escolher Foto da Galeria</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.modalButton, styles.buttonClose]}
+              onPress={() => {
+                removePhoto();
+                setModalVisible(!modalVisible);
+              }}
+            >
+              <Text style={styles.textStyle}>Remover Foto de Perfil</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.modalButton, styles.buttonClose]}
+              onPress={() => setModalVisible(!modalVisible)}
+            >
+              <Text style={styles.textStyle}>Cancelar</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 };
@@ -364,6 +423,42 @@ const styles = StyleSheet.create({
     color: "white",
     fontSize: 16,
     fontWeight: "bold",
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: "flex-end",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
+  },
+  modalView: {
+    width: "100%",
+    backgroundColor: "#222",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingVertical: 20,
+    alignItems: "center",
+    // shadowColor: "#000",
+    // shadowOffset: {
+    //   width: 0,
+    //   height: 2,
+    // },
+    // shadowOpacity: 0.25,
+    // shadowRadius: 4,
+    // elevation: 5,
+  },
+  modalButton: {
+    borderRadius: 10,
+    padding: 10,
+    width: "90%",
+    marginBottom: 15,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: 'white'
+  },
+  textStyle: {
+    color: "white",
+    fontWeight: "bold",
+    textAlign: "center",
   },
 });
 
