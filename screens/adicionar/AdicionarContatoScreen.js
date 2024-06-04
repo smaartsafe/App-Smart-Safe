@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -12,9 +12,10 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as Contacts from "expo-contacts";
-import { getDatabase, ref, set, get } from "firebase/database";
+import { getDatabase, ref, set, get, remove } from "firebase/database";
 import { getAuth } from "firebase/auth";
 import * as SMS from "expo-sms";
+import { useFocusEffect } from '@react-navigation/native';
 
 const AdicionarContatoScreen = () => {
   const [selectedContacts, setSelectedContacts] = useState([]);
@@ -24,8 +25,7 @@ const AdicionarContatoScreen = () => {
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
   const [confirmationMessage, setConfirmationMessage] = useState("");
   const [allContacts, setAllContacts] = useState([]);
-  const [userId, setUserId] = useState(null); // Armazenar o ID do usuário
-  const [favoritedContact, setFavoritedContact] = useState(null);
+  const [userId, setUserId] = useState(null);
 
   useEffect(() => {
     const requestContactsPermission = async () => {
@@ -46,7 +46,7 @@ const AdicionarContatoScreen = () => {
     };
 
     requestContactsPermission();
-    fetchUserId(); // Obter o ID do usuário ao carregar o componente
+    fetchUserId();
   }, []);
 
   useEffect(() => {
@@ -54,6 +54,14 @@ const AdicionarContatoScreen = () => {
       loadContactsFromDatabase();
     }
   }, [userId]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (userId) {
+        loadContactsFromDatabase();
+      }
+    }, [userId])
+  );
 
   const fetchUserId = () => {
     const auth = getAuth();
@@ -71,10 +79,9 @@ const AdicionarContatoScreen = () => {
     if (!isContactAlreadyAdded) {
       const { name, phoneNumbers } = contact;
       const formattedContact = {
-        id: addedContacts.length, // Usando o índice como identificador único temporário
+        id: addedContacts.length,
         name,
-        phoneNumber:
-          phoneNumbers && phoneNumbers.length > 0 ? phoneNumbers[0].number : "",
+        phoneNumber: phoneNumbers && phoneNumbers.length > 0 ? phoneNumbers[0].number : "",
       };
       setAddedContacts([...addedContacts, formattedContact]);
       sendContactToDatabase(formattedContact);
@@ -88,7 +95,7 @@ const AdicionarContatoScreen = () => {
       const contactsRef = ref(db, `Contatos/${userId}`);
       const snapshot = await get(contactsRef);
       if (snapshot.exists()) {
-        setAddedContacts(snapshot.val());
+        setAddedContacts(Object.values(snapshot.val()));
       }
     } catch (error) {
       console.error("Error loading contacts from database:", error);
@@ -102,17 +109,25 @@ const AdicionarContatoScreen = () => {
   };
 
   const handleDeleteContact = (contactIndex) => {
+    const contactToDelete = addedContacts[contactIndex];
     const updatedContacts = addedContacts.filter(
       (_, index) => index !== contactIndex
     );
     setAddedContacts(updatedContacts);
-    sendContactsToDatabase(updatedContacts); // Atualiza os contatos no banco de dados
+    removeContactFromDatabase(contactToDelete.id);
+    sendContactsToDatabase(updatedContacts);
+  };
+
+  const removeContactFromDatabase = (contactId) => {
+    const db = getDatabase();
+    const contactRef = ref(db, `Contatos/${userId}/${contactId}`);
+    remove(contactRef);
   };
 
   const sendContactsToDatabase = (contacts) => {
     const db = getDatabase();
     const contactsRef = ref(db, `Contatos/${userId}`);
-    set(contactsRef, contacts); // Substitui todos os contatos no banco de dados pelo array fornecido
+    set(contactsRef, contacts);
   };
 
   const handleCallContact = (phoneNumber) => {
@@ -154,11 +169,9 @@ const AdicionarContatoScreen = () => {
     });
 
     const sortedContacts = filteredContacts.sort((a, b) => {
-      // Priorizar a ordenação por nome se o texto de pesquisa for alfabético
       if (isNaN(text)) {
         return a.name.localeCompare(b.name);
       }
-      // Caso contrário, priorizar a ordenação por número
       return a.phoneNumbers[0].number.localeCompare(b.phoneNumbers[0].number);
     });
 
@@ -166,19 +179,23 @@ const AdicionarContatoScreen = () => {
   };
 
   const renderContactItem = ({ item }) => {
-    if (!item.name || item.name === "null" || item.name === "null null") {
-      return null; // Retorna null para não renderizar nada
+    if (!item.name || item.name.trim() === "" || item.name.toLowerCase() === "null") {
+      return null;
+    }
+
+    const phoneNumber = item.phoneNumbers && item.phoneNumbers.length > 0
+      ? item.phoneNumbers[0].number
+      : "";
+
+    if (!phoneNumber) {
+      return null;
     }
 
     return (
       <TouchableOpacity onPress={() => handleAddSelectedContact(item)}>
         <View style={styles.contactItem}>
           <Text style={styles.contactName}>{item.name}</Text>
-          {item.phoneNumbers && item.phoneNumbers.length > 0 && (
-            <Text style={styles.contactNumber}>
-              {item.phoneNumbers[0].number}
-            </Text>
-          )}
+          <Text style={styles.contactNumber}>{phoneNumber}</Text>
         </View>
       </TouchableOpacity>
     );
@@ -187,17 +204,13 @@ const AdicionarContatoScreen = () => {
   const toggleFavorite = (contactIndex) => {
     const contact = addedContacts[contactIndex];
     const updatedContact = { ...contact, favorited: !contact.favorited };
-  
-    // Desfavoritar todos os contatos
+
     const updatedContacts = addedContacts.map((c, index) => ({
       ...c,
       favorited: index === contactIndex ? !c.favorited : false,
     }));
-  
-    // Atualiza o estado local
+
     setAddedContacts(updatedContacts);
-  
-    // Envia os contatos atualizados para o banco de dados
     sendContactsToDatabase(updatedContacts);
   };
 
@@ -247,8 +260,8 @@ const AdicionarContatoScreen = () => {
   );
 
   const handleDeleteAllContacts = () => {
-    setAddedContacts([]); // Limpa a lista de contatos adicionados
-    sendContactsToDatabase([]); // Limpar os contatos no banco de dados
+    setAddedContacts([]);
+    sendContactsToDatabase([]);
   };
 
   return (

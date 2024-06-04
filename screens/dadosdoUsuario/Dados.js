@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { getDatabase, get, ref, child, update } from "firebase/database";
-import { getAuth, updateEmail, fetchSignInMethodsForEmail } from "firebase/auth";
+import { getAuth } from "firebase/auth";
 import { FontAwesome } from "@expo/vector-icons";
 
 const DadosdoUsuario = ({ route }) => {
@@ -18,7 +18,6 @@ const DadosdoUsuario = ({ route }) => {
   const [editingField, setEditingField] = useState(null);
   const [novoNome, setNovoNome] = useState("");
   const [novoSobrenome, setNovoSobrenome] = useState("");
-  const [novoEmail, setNovoEmail] = useState("");
   const [novaRua, setNovaRua] = useState("");
   const [novoBairro, setNovoBairro] = useState("");
   const [novaCidade, setNovaCidade] = useState("");
@@ -71,35 +70,9 @@ const DadosdoUsuario = ({ route }) => {
         const novoPerfil = {};
         if (novoNome.trim() !== "") novoPerfil.nome = novoNome;
         if (novoSobrenome.trim() !== "") novoPerfil.sobrenome = novoSobrenome;
-        if (novoEmail.trim() !== "") novoPerfil.email = novoEmail;
         if (novaRua.trim() !== "") novoPerfil.rua = novaRua;
         if (novoBairro.trim() !== "") novoPerfil.bairro = novoBairro;
         if (novaCidade.trim() !== "") novoPerfil.cidade = novaCidade;
-
-        // Verificar se o novo email é válido
-        if (!isValidEmail(novoEmail)) {
-          Alert.alert("Email Inválido", "Por favor, insira um email válido.");
-          return;
-        }
-
-        // Verificar se o novo email é diferente do email atual
-        if (novoEmail.trim() === perfilData.email) {
-          Alert.alert("Email Existente", "O novo email é o mesmo que o email atual.");
-          return;
-        }
-
-        // Verificar se o novo email já está em uso
-        const methods = await fetchSignInMethodsForEmail(auth, novoEmail);
-        if (methods && methods.length > 0) {
-          Alert.alert("Email em Uso", "O novo email já está sendo usado por outra conta.");
-          return;
-        }
-
-        // Solicitar ao usuário que verifique o novo email
-        Alert.alert(
-          "Verificação de Email",
-          "Um email de verificação foi enviado para o novo endereço de email. Por favor, verifique o email e siga as instruções para concluir a alteração."
-        );
 
         // Atualizar o perfil no banco de dados em tempo real
         await update(child(dbref, `users/${user.uid}`), novoPerfil);
@@ -123,13 +96,6 @@ const DadosdoUsuario = ({ route }) => {
 
   const handleEditField = (fieldName) => {
     setEditingField(fieldName);
-  };
-  
-
-  const isValidEmail = (email) => {
-    // Expressão regular para validar o formato do email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
   };
 
   if (!perfilData) {
@@ -222,27 +188,7 @@ const DadosdoUsuario = ({ route }) => {
           />
           <View style={styles.labelValueContainer}>
             <Text style={styles.label}>Email:</Text>
-            {editingField === "email" ? (
-              <TextInput
-                style={styles.input}
-                value={novoEmail}
-                onChangeText={setNovoEmail}
-                placeholder={limitarTexto(perfilData.email)}
-
-              />
-            ) : (
-              <Text style={styles.value}>{limitarTexto(perfilData.email)}</Text>
-            )}
-            {editingField !== "email" && (
-              <TouchableOpacity onPress={() => handleEditField("email")}>
-                <FontAwesome
-                  name="pencil"
-                  size={20}
-                  color="white"
-                  style={styles.editIcon}
-                />
-              </TouchableOpacity>
-            )}
+            <Text style={styles.value}>{limitarTexto(perfilData.email)}</Text>
           </View>
         </View>
         <View style={styles.userData}>
@@ -441,11 +387,9 @@ const styles = StyleSheet.create({
   saveButtonContainer: {
     alignItems: "center",
     marginTop: 20,
-    
   },
   successText:{
     color: "white",
-
   }
 });
 

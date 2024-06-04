@@ -189,39 +189,52 @@ const Inicio = () => {
 
   const handleEmergencyCall = async () => {
     try {
+      const auth = getAuth();
+      const user = auth.currentUser;
+  
+      if (!user) {
+        console.error('Usuário não autenticado');
+        Alert.alert('Erro: Usuário não autenticado.');
+        return;
+      }
+  
       const db = getDatabase();
-      const usersSnapshot = await get(ref(db, 'Contatos')); // Obtém todos os usuários
-      
+      const userContactsRef = ref(db, `Contatos/${user.uid}`); // Caminho correto para os contatos do usuário
+  
+      const snapshot = await get(userContactsRef);
+      if (!snapshot.exists()) {
+        console.error('Nenhum contato encontrado');
+        Alert.alert('Nenhum contato encontrado.');
+        return;
+      }
+  
       let favoritedContactFound = false; // Flag para indicar se um contato favorito foi encontrado
-      
-      usersSnapshot.forEach((userSnapshot) => {
-        userSnapshot.forEach((contactSnapshot) => { // Itera sobre os contatos de cada usuário
-          const contact = contactSnapshot.val();
-          
-          if (contact.favorited === true) {
-            const phoneNumber = contact.phoneNumber;
+      snapshot.forEach((contactSnapshot) => {
+        const contact = contactSnapshot.val();
+        if (contact.favorited) {
+          const phoneNumber = contact.phoneNumber;
+  
+          // Verifica se a localização está disponível antes de enviar a mensagem
+          if (userLocation && userLocation.coords) {
+            const { latitude, longitude } = userLocation.coords;
+            const mapsLink = `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
+  
+            // Envia a mensagem para o contato favorito
+            const message = `Socorro! Estou em uma situação de emergência e preciso de ajuda urgente! Por favor, clique no link abaixo para ver minha localização atual e me encontrar o mais rápido possível: ${mapsLink}`;
+            const url = `whatsapp://send?phone=${phoneNumber}&text=${encodeURIComponent(message)}`;
+            Linking.openURL(url);
+  
+            favoritedContactFound = true; // Define a flag como verdadeira após encontrar um contato favorito
             
-            // Verifica se a localização está disponível antes de enviar a mensagem
-            if (userLocation && userLocation.coords) {
-              const { latitude, longitude } = userLocation.coords;
-              const mapsLink = `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
-              
-              // Envia a mensagem para o contato favorito
-              const message = `Socorro! Estou em uma situação de emergência e preciso de ajuda urgente! Por favor, clique no link abaixo para ver minha localização atual e me encontrar o mais rápido possível: ${mapsLink}`;
-              const url = `whatsapp://send?phone=${phoneNumber}&text=${encodeURIComponent(message)}`;
-              Linking.openURL(url);
-              
-              favoritedContactFound = true; // Define a flag como verdadeira após encontrar um contato favorito
-              
-              // Se quiser parar após o primeiro contato favoritado encontrado, pode usar "return true;" aqui
-            } else {
-              console.error('Localização não disponível');
-              Alert.alert('Erro ao enviar a mensagem: Localização não disponível.');
-            }
+            // Sai do loop após encontrar um contato favorito
+            return true;
+          } else {
+            console.error('Localização não disponível');
+            Alert.alert('Erro ao enviar a mensagem: Localização não disponível.');
           }
-        });
+        }
       });
-      
+  
       // Se nenhum contato favorito foi encontrado, exiba uma mensagem
       if (!favoritedContactFound) {
         console.error('Nenhum contato favorito encontrado');
@@ -232,6 +245,7 @@ const Inicio = () => {
       Alert.alert('Erro ao acionar o contato de emergência. Por favor, tente novamente mais tarde.');
     }
   };
+  
   
   
 return (
