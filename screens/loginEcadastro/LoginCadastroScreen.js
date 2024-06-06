@@ -210,14 +210,14 @@ const styles = StyleSheet.create({
     paddingVertical: 30,
   },
   logo: {
-    width: 150,
-    height: 150,
+    width: 180,
+    height: 180,
   },
 
   containerText: {
     width: "90%",
     alignItems: "center",
-    gap: 5,
+    gap: 10,
   },
   TextTitle: {
     fontSize: 34,
