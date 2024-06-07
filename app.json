@@ -26,8 +26,8 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./src/assets/Logo-Atual.png",
-        "backgroundColor": "#fff"
+        "foregroundImage": "./src/assets/foregroundImage.png",
+        "backgroundColor": "#45227d"
       },
       "package": "com.yourcompany.yourappname",
       "config": {
