@@ -96,9 +96,11 @@ const Inicio = () => {
       if (user) {
         const dbref = ref(getDatabase());
         const novoPerfil = {
-          rua: address.street,
-          bairro: address.subregion,
-          cidade: address.city || address.district,
+          rua: address?.street || '',
+          bairro: address?.subregion || '',
+          cidade: address?.city || address?.district || '',
+          latitude: userLocation?.coords.latitude || '',
+          longitude: userLocation?.coords.longitude || ''
         };
 
         await update(child(dbref, `users/${user.uid}`), novoPerfil);
@@ -165,7 +167,9 @@ const Inicio = () => {
                 nome: nome+ " " +sobrenome,
                 local: rua+ ", " + bairro + ", " + cidade + ", " + estado , 
                 horario: (new Date()).getTime(),
-                audio: downloadURL
+                audio: downloadURL,
+                latitude: userLocation?.coords.latitude || '',
+                longitude: userLocation?.coords.longitude || ''
               }).then(() => {}).catch(err => {
                 console.log("Firestore:", err)
               })

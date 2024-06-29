@@ -20,6 +20,7 @@ import {
 import { FontAwesome } from "@expo/vector-icons";
 import { format } from "date-fns";
 import { Audio } from "expo-av";
+import Slider from '@react-native-community/slider';
 
 const AudioScreen = () => {
   const [audioList, setAudioList] = useState([]);
@@ -27,66 +28,10 @@ const AudioScreen = () => {
   const [userUid, setUserUid] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const [soundObject, setSoundObject] = useState(null);
-
-  const deleteAllAudios = async () => {
-    try {
-      setLoading(true); // Define o estado de carregamento como true ao iniciar a exclusão dos áudios
-      const userResponse = await new Promise((resolve, reject) => {
-        Alert.alert(
-          "Excluir todos os áudios",
-          "Tem certeza de que deseja excluir todos os áudios?",
-          [
-            {
-              text: "Cancelar",
-              style: "cancel",
-              onPress: () => resolve(false),
-            },
-            {
-              text: "Sim",
-              onPress: async () => {
-                try {
-                  const storage = getStorage();
-                  await Promise.all(
-                    audioList.map(async (audio) => {
-                      const audioRef = ref(
-                        storage,
-                        `recordings/${userUid}/${audio.audioNumber}`
-                      );
-                      await deleteObject(audioRef);
-                    })
-                  );
-                  Alert.alert(
-                    "Sucesso",
-                    "Todos os áudios foram excluídos com sucesso."
-                  );
-                  setAudioList([]); // Limpa a lista de áudios após a exclusão
-                  resolve(true);
-                } catch (error) {
-                  console.error("Erro ao excluir todos os áudios:", error);
-                  Alert.alert("Erro", "Falha ao excluir todos os áudios");
-                  reject(error);
-                }
-              },
-            },
-          ],
-          { cancelable: false }
-        );
-      });
-
-      if (!userResponse) {
-        setLoading(false); // Define o estado de carregamento como false se o usuário cancelar a exclusão
-      }
-    } catch (error) {
-      console.error("Erro ao excluir todos os áudios:", error);
-      Alert.alert("Erro", "Falha ao excluir todos os áudios");
-    } finally {
-      setLoading(false); // Define o estado de carregamento como false em caso de erro ou ao finalizar a exclusão
-    }
-  };
-
   const [audioStatus, setAudioStatus] = useState({
     isPlaying: false,
-    positionMillis: 0, // Armazena o tempo de reprodução atual
+    positionMillis: 0,
+    durationMillis: 0,
   });
 
   useEffect(() => {
@@ -127,12 +72,22 @@ const AudioScreen = () => {
           const metadata = await getMetadata(item);
           const createdAt = metadata.timeCreated;
           const audioNumber = item.name.split("_")[0];
-          return { item, createdAt, audioNumber };
+          const url = await getDownloadURL(item);
+          const sound = new Audio.Sound();
+          await sound.loadAsync({ uri: url });
+          const status = await sound.getStatusAsync();
+          await sound.unloadAsync(); // Unload sound to prevent memory leaks
+          return {
+            item,
+            createdAt,
+            audioNumber,
+            durationMillis: status.durationMillis,
+          };
         })
       );
 
       // Ordena os áudios pelo mais recente primeiro
-      audioListWithMetadata.sort((a, b) => b.createdAt - a.createdAt);
+      audioListWithMetadata.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
       setAudioList(audioListWithMetadata);
     } catch (error) {
@@ -153,42 +108,56 @@ const AudioScreen = () => {
       if (soundObject) {
         await soundObject.unloadAsync();
       }
-
+  
       const storage = getStorage();
       const audioRef = ref(storage, `recordings/${userUid}/${audioNumber}`);
       const url = await getDownloadURL(audioRef);
-
+  
       const newSoundObject = new Audio.Sound();
       await newSoundObject.loadAsync({
         uri: url,
         positionMillis: audioStatus.positionMillis,
-      }); // Passa o tempo de reprodução atual
+      });
+  
       setSoundObject(newSoundObject);
-
-      // Verifica se o áudio está pausado e se a posição de reprodução é maior que 0
+  
       if (!audioStatus.isPlaying && audioStatus.positionMillis > 0) {
-        await newSoundObject.playFromPositionAsync(audioStatus.positionMillis); // Resumindo a reprodução do ponto pausado
+        await newSoundObject.playFromPositionAsync(audioStatus.positionMillis);
       } else {
         await newSoundObject.playAsync();
       }
-
-      setAudioStatus({ ...audioStatus, isPlaying: true });
+  
+      newSoundObject.setOnPlaybackStatusUpdate(onPlaybackStatusUpdate);
     } catch (error) {
       console.error("Erro ao reproduzir áudio:", error);
       Alert.alert("Erro", "Falha ao reproduzir o áudio");
     }
   };
+  
+  const onPlaybackStatusUpdate = (status) => {
+    if (status.isLoaded) {
+      setAudioStatus((prevStatus) => ({
+        ...prevStatus,
+        isPlaying: status.isPlaying,
+        positionMillis: status.positionMillis,
+        durationMillis: status.durationMillis,
+      }));
+  
+      if (status.didJustFinish && audioStatus.isPlaying) {
+        setAudioStatus({
+          isPlaying: false,
+          positionMillis: 0,
+          durationMillis: 0,
+        });
+      }
+    }
+  };
+  
 
   const pauseAudio = async () => {
     try {
       if (soundObject) {
-        const status = await soundObject.getStatusAsync();
         await soundObject.pauseAsync();
-        setAudioStatus({
-          ...audioStatus,
-          isPlaying: false,
-          positionMillis: status.positionMillis,
-        }); // Atualiza o tempo de reprodução ao pausar
       }
     } catch (error) {
       console.error("Erro ao pausar áudio:", error);
@@ -202,15 +171,104 @@ const AudioScreen = () => {
       const audioRef = ref(storage, `recordings/${userUid}/${audioNumber}`);
       await deleteObject(audioRef);
       Alert.alert("Sucesso", "Áudio excluído com sucesso.");
-      fetchAudioList(userUid); // Atualiza a lista de áudios após a exclusão
+      fetchAudioList(userUid);
     } catch (error) {
       console.error("Erro ao excluir áudio:", error);
       Alert.alert("Erro", "Falha ao excluir o áudio");
     }
   };
 
-  const AudioItem = ({ createdAt, audioNumber, index }) => {
-    const [isPlaying, setIsPlaying] = useState(false);
+  const confirmDeleteAll = async () => {
+    Alert.alert(
+      "Excluir todos os áudios",
+      "Tem certeza de que deseja excluir todos os áudios?",
+      [
+        {
+          text: "Cancelar",
+          style: "cancel",
+        },
+        {
+          text: "Sim",
+          onPress: deleteAllAudios,
+        },
+      ],
+      { cancelable: false }
+    );
+  };
+
+  const deleteAllAudios = async () => {
+    try {
+      setLoading(true);
+      const storage = getStorage();
+      await Promise.all(
+        audioList.map(async (audio) => {
+          const audioRef = ref(
+            storage,
+            `recordings/${userUid}/${audio.audioNumber}`
+          );
+          await deleteObject(audioRef);
+        })
+      );
+      Alert.alert("Sucesso", "Todos os áudios foram excluídos com sucesso.");
+      setAudioList([]);
+    } catch (error) {
+      console.error("Erro ao excluir todos os áudios:", error);
+      Alert.alert("Erro", "Falha ao excluir todos os áudios");
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const formatTime = (millis) => {
+    const minutes = Math.floor(millis / 60000);
+    const seconds = ((millis % 60000) / 1000).toFixed(0);
+    return `${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
+  };
+
+  const AudioItem = ({ createdAt, audioNumber, durationMillis }) => {
+    const [sliderValue, setSliderValue] = useState(0);
+
+    useEffect(() => {
+      if (audioStatus.isPlaying) {
+        const interval = setInterval(() => {
+          setSliderValue((prevValue) => {
+            const newValue = prevValue + 1000; // Incremento de 1000 milissegundos (1 segundo)
+            if (newValue > durationMillis) {
+              clearInterval(interval);
+              return durationMillis;
+            }
+            return newValue;
+          });
+        }, 1000);
+        return () => clearInterval(interval);
+      } else {
+        setSliderValue(0);
+      }
+    }, [audioStatus.isPlaying, durationMillis]);
+
+    const handlePlayPause = async () => {
+      if (audioStatus.isPlaying) {
+        await pauseAudio();
+      } else {
+        await playAudio(audioNumber);
+      }
+    };
+
+    const handleSliderChange = async (value) => {
+      try {
+        if (soundObject) {
+          await soundObject.setPositionAsync(value);
+          setAudioStatus((prevStatus) => ({
+            ...prevStatus,
+            positionMillis: value,
+          }));
+          setSliderValue(value);
+        }
+      } catch (error) {
+        console.error("Erro ao ajustar posição do áudio:", error);
+        Alert.alert("Erro", "Falha ao ajustar a posição do áudio");
+      }
+    };
 
     const confirmDelete = () => {
       Alert.alert(
@@ -231,34 +289,6 @@ const AudioScreen = () => {
       return format(new Date(createdAt), "dd/MM/yyyy HH:mm");
     };
 
-    useEffect(() => {
-      if (soundObject) {
-        soundObject.setOnPlaybackStatusUpdate(onPlaybackStatusUpdate);
-      }
-      return () => {
-        if (soundObject) {
-          soundObject.setOnPlaybackStatusUpdate(null);
-        }
-      };
-    }, [soundObject]);
-
-    const onPlaybackStatusUpdate = (status) => {
-      if (status.isPlaying) {
-        setIsPlaying(true);
-      } else {
-        setIsPlaying(false);
-      }
-    };
-
-    const handlePlayPause = async () => {
-      if (isPlaying) {
-        await pauseAudio();
-        setIsPlaying(false);
-      } else {
-        await playAudio(audioNumber);
-        setIsPlaying(true);
-      }
-    };
     return (
       <View style={styles.audioItem}>
         <View style={styles.controlsContainer}>
@@ -267,19 +297,35 @@ const AudioScreen = () => {
             onPress={handlePlayPause}
           >
             <FontAwesome
-              name={isPlaying ? "pause" : "play"}
-              size={24}
+              name={audioStatus.isPlaying ? "pause" : "play"}
+              size={26}
               color="white"
             />
           </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.audioControls}
-            onPress={confirmDelete}
-          >
-            <FontAwesome name="trash" size={24} color="white" />
-          </TouchableOpacity>
         </View>
-        <Text style={styles.audioInfo}>{`${formatDate(createdAt)}`}</Text>
+        <View style={styles.audioInfoContainer}>
+          <Text style={styles.audioInfo}>{formatDate(createdAt)}</Text>
+          <Slider
+            style={styles.progressBar}
+            value={sliderValue}
+            maximumValue={durationMillis}
+            minimumTrackTintColor="#FFFFFF"
+            maximumTrackTintColor="#000000"
+            thumbTintColor="#FFFFFF"
+            onValueChange={setSliderValue}
+            onSlidingComplete={handleSliderChange}
+          />
+          <View style={styles.timeContainer}>
+            <Text style={styles.timeText}>{formatTime(sliderValue)}</Text>
+            <Text style={styles.timeText}>{formatTime(durationMillis)}</Text>
+          </View>
+        </View>
+        <TouchableOpacity
+          style={styles.audioControls}
+          onPress={confirmDelete}
+        >
+          <FontAwesome name="trash" size={26} color="white" />
+        </TouchableOpacity>
       </View>
     );
   };
@@ -287,20 +333,20 @@ const AudioScreen = () => {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="white" />
+        <ActivityIndicator size="large" color="#9344fa" />
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <View style={styles.Options}>
+      <View style={styles.options}>
         <TouchableOpacity style={styles.refreshButton} onPress={handleRefresh}>
           <FontAwesome name="refresh" size={26} color="white" />
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.deleteAllButton}
-          onPress={deleteAllAudios}
+          onPress={confirmDeleteAll}
         >
           <FontAwesome name="trash" size={26} color="white" />
           <Text style={styles.deleteAllButtonText}>Apagar Todos</Text>
@@ -309,16 +355,16 @@ const AudioScreen = () => {
 
       <FlatList
         data={audioList}
-        renderItem={({ item, index }) => (
+        renderItem={({ item }) => (
           <AudioItem
             createdAt={item.createdAt}
             audioNumber={item.audioNumber}
-            index={index}
+            durationMillis={item.durationMillis}
           />
         )}
         keyExtractor={(item, index) => index.toString()}
         ListEmptyComponent={
-          <Text style={styles.titleText}>Nenhum áudio disponível</Text>
+          <Text style={styles.emptyListText}>Nenhum áudio disponível</Text>
         }
         refreshing={refreshing}
         onRefresh={handleRefresh}
@@ -333,53 +379,68 @@ const styles = StyleSheet.create({
     backgroundColor: "#3c0c7b",
     padding: 10,
   },
-  audioItem: {
+  options: {
+    width: "100%",
+    flexDirection: "row-reverse",
+    justifyContent: "space-between",
+    marginBottom: 20,
+  },
+  refreshButton: {
+    padding: 10,
+    backgroundColor: "#9344fa",
+    borderRadius: 50,
+  },
+  deleteAllButton: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#9344fa",
-    borderRadius: 10,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    marginBottom: 15,
-    justifyContent: "space-between",
+    padding: 10,
+    borderRadius: 50,
   },
-  controlsContainer: {
-    flexDirection: "row",
-  },
-  audioControls: {
-    marginRight: 15,
-  },
-  audioInfo: {
-    color: "#000",
+  deleteAllButtonText: {
+    color: "white",
+    marginLeft: 5,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "",
   },
-  Options: {
-    width: '100%',
-    flexDirection: "row-reverse",
-    justifyContent: 'space-between',
-    marginBottom: 20,
-    alignItems: 'center',
-    padding: 5,
+  audioItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#9344fa",
+    borderRadius: 10,
+    padding: 20,
+    marginBottom: 15,
+    justifyContent: "space-between",
   },
-  refreshButton: {
+  audioInfoContainer: {
+    flex: 1,
+  },
+  audioInfo: {
+    color: "#fff",
+    fontSize: 16,
+  },
+  progressBar: {
+    width: "100%",
+    height: 40,
+  },
+  timeContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  timeText: {
+    color: "#fff",
+    fontSize: 12,
+  },
+  controlsContainer: {
+    flexDirection: "row",
+  },
+  audioControls: {
     marginLeft: 10,
   },
-  deleteAllButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-  },
-
-  deleteAllButtonText: {
-    color: "white",
-    marginLeft: 5,
-  },
-  titleText: {
+  emptyListText: {
     color: "#fff",
     fontSize: 18,
     textAlign: "center",

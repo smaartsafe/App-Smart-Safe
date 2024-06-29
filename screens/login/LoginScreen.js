@@ -7,19 +7,19 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
-  ImageBackground
+  ImageBackground,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
-import * as SecureStore from 'expo-secure-store';
-import * as LocalAuthentication from 'expo-local-authentication';
+import * as SecureStore from "expo-secure-store";
+import * as LocalAuthentication from "expo-local-authentication";
 
-const LoginScreen = ({navigation }) => {
+const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState(""); 
+  const [errorMessage, setErrorMessage] = useState("");
 
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
@@ -27,27 +27,36 @@ const LoginScreen = ({navigation }) => {
 
   const handleLogin = async () => {
     setIsLoading(true);
-  
+
     try {
-      const isBiometricAvailable = await LocalAuthentication.hasHardwareAsync() && await LocalAuthentication.isEnrolledAsync();
+      const isBiometricAvailable =
+        (await LocalAuthentication.hasHardwareAsync()) &&
+        (await LocalAuthentication.isEnrolledAsync());
       let isAuthenticated = false;
-  
+
       if (isBiometricAvailable) {
-        const result = await LocalAuthentication.authenticateAsync({ promptMessage: 'Autenticação' });
+        const result = await LocalAuthentication.authenticateAsync({
+          promptMessage: "Autenticação",
+        });
         isAuthenticated = result.success;
       } else {
         // Se a autenticação biométrica não estiver disponível, solicite a senha do dispositivo
-        isAuthenticated = await LocalAuthentication.authenticateAsync({ promptMessage: 'Autenticação de senha do dispositivo' });
+        isAuthenticated = await LocalAuthentication.authenticateAsync({
+          promptMessage: "Autenticação de senha do dispositivo",
+        });
       }
-  
+
       if (isAuthenticated) {
         const auth = getAuth();
         const login = await signInWithEmailAndPassword(auth, email, senha);
-        await SecureStore.setItemAsync('userEmail', email);
-        await SecureStore.setItemAsync('userPassword', senha);
+        await SecureStore.setItemAsync("userEmail", email);
+        await SecureStore.setItemAsync("userPassword", senha);
         navigation.navigate("MainTabs");
       } else {
-        Alert.alert('Erro', 'Autenticação biométrica ou de senha do dispositivo falhou. Por favor, tente novamente.');
+        Alert.alert(
+          "Erro",
+          "Autenticação biométrica ou de senha do dispositivo falhou. Por favor, tente novamente."
+        );
       }
     } catch (error) {
       console.error("Erro ao fazer login:", error);
@@ -56,20 +65,28 @@ const LoginScreen = ({navigation }) => {
       setIsLoading(false);
     }
   };
-  
-  
+
+  const clearCredentials = async () => {
+    try {
+      await SecureStore.deleteItemAsync("userEmail");
+      await SecureStore.deleteItemAsync("userPassword");
+    } catch (error) {
+      console.error("Erro ao limpar credenciais:", error);
+    }
+  };
 
   useEffect(() => {
     const loadCredentials = async () => {
       try {
-        const savedEmail = await SecureStore.getItemAsync('userEmail');
-        const savedSenha = await SecureStore.getItemAsync('userPassword');
+        const savedEmail = await SecureStore.getItemAsync("userEmail");
+        const savedSenha = await SecureStore.getItemAsync("userPassword");
         if (savedEmail && savedSenha) {
           setEmail(savedEmail);
           setSenha(savedSenha);
         }
       } catch (error) {
-        console.error('Erro ao carregar credenciais:', error);
+        console.error("Erro ao carregar credenciais:", error);
+        clearCredentials();
       }
     };
 
@@ -154,7 +171,7 @@ const LoginScreen = ({navigation }) => {
 const styles = StyleSheet.create({
   background: {
     flex: 1,
-    resizeMode: "cover", 
+    resizeMode: "cover",
   },
   container: {
     flex: 1,
@@ -165,7 +182,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     marginBottom: 20,
-    color: 'white'
+    color: "white",
   },
   inputGroup: {
     marginBottom: 5,
@@ -177,7 +194,7 @@ const styles = StyleSheet.create({
   label: {
     marginBottom: 5,
     fontWeight: "bold",
-    color: 'white'
+    color: "white",
   },
   input: {
     width: "100%",
@@ -187,7 +204,7 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     marginBottom: 5,
     paddingHorizontal: 10,
-    color: 'white',
+    color: "white",
   },
   backButton: {
     flexDirection: "row",
@@ -203,7 +220,7 @@ const styles = StyleSheet.create({
   icon: {
     right: 10,
     top: 8,
-    position: 'absolute',
+    position: "absolute",
   },
   forgotPassword: {
     marginBottom: 20,
@@ -211,10 +228,9 @@ const styles = StyleSheet.create({
     right: 40,
   },
   forgotPasswordText: {
-    color: "blue",
     fontWeight: "bold",
     textDecorationLine: "underline",
-    color: 'white'
+    color: "white",
   },
   button: {
     backgroundColor: "white",
@@ -228,7 +244,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   errorText: {
-    color: 'red',
+    color: "red",
     marginBottom: 5,
   },
 });

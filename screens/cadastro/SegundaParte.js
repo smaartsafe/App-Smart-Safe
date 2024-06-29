@@ -77,15 +77,16 @@ const SegundaParte = () => {
   const getLocation = async () => {
     try {
       let location = await Location.getCurrentPositionAsync({});
-      getAddressFromCoords(location.coords.latitude, location.coords.longitude);
+      retryReverseGeocodeAsync(location.coords.latitude, location.coords.longitude);
     } catch (error) {
       console.error("Erro ao obter localização:", error);
       Alert.alert("Erro", "Ocorreu um erro ao obter a localização.");
     }
   };
 
-  const getAddressFromCoords = async (latitude, longitude) => {
+  const retryReverseGeocodeAsync = async (latitude, longitude, retries = 3) => {
     try {
+      console.log(`Tentando obter endereço: tentativa ${4 - retries}`);
       let address = await Location.reverseGeocodeAsync({ latitude, longitude });
 
       if (address.length > 0) {
@@ -95,13 +96,22 @@ const SegundaParte = () => {
           setCidade(address[0].city || "");
         }
         setRua(address[0].street || "");
-        setCidade(address[0].subregion || "");
+        setBairro(address[0].district || ""); // Correção feita aqui
+        console.log("Endereço obtido com sucesso:", address[0]);
       }
     } catch (error) {
       console.error("Erro ao obter endereço:", error);
-      Alert.alert("Erro", "Ocorreu um erro ao obter o endereço.");
+      if (retries > 0) {
+        console.warn("Retrying reverse geocode...");
+        await new Promise(resolve => setTimeout(resolve, 2000)); // Espera 5 segundos antes de tentar novamente
+        retryReverseGeocodeAsync(latitude, longitude, retries - 1);
+      } else {
+        console.error("Erro ao obter endereço após várias tentativas:", error);
+        Alert.alert("Erro", "Ocorreu um erro ao obter o endereço.");
+      }
     }
-  };
+};
+
 
   const handleFinalizarCadastro = async () => {
     try {
@@ -206,7 +216,7 @@ const SegundaParte = () => {
                 value={cep}
                 onChangeText={setCep}
                 keyboardType="numeric"
-                editable={false}
+                editable={true}
               />
             </View>
             <View style={styles.formGroup}>
@@ -215,7 +225,7 @@ const SegundaParte = () => {
                 style={styles.input}
                 value={estado}
                 onChangeText={setEstado}
-                editable={false}
+                editable={true}
               />
             </View>
           </View>
@@ -226,7 +236,7 @@ const SegundaParte = () => {
                 style={styles.input}
                 value={cidade}
                 onChangeText={setCidade}
-                editable={false}
+                editable={true}
               />
             </View>
             <View style={styles.formGroup}>
@@ -360,7 +370,7 @@ const styles = StyleSheet.create({
   label: {
     marginBottom: 5,
     fontWeight: "bold",
-    color: "white", // Adicionando cor branca aos labels
+    color: "white",
   },
   input: {
     borderWidth: 1,
@@ -368,7 +378,7 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     padding: 7,
     width: "100%",
-    color: 'white'
+    color: "white",
   },
   backButton: {
     flexDirection: "row",
