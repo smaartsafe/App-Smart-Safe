@@ -3,6 +3,7 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
 import { createDrawerNavigator } from "@react-navigation/drawer";
 import Icon from "react-native-vector-icons/FontAwesome";
+import { TouchableOpacity, StyleSheet, Image, StatusBar } from "react-native";
 import LoginCadastroScreen from "./screens/loginEcadastro/LoginCadastroScreen";
 import LoginScreen from "./screens/login/LoginScreen";
 import Inicio from "./screens/inicio/Inicio";
@@ -12,66 +13,64 @@ import SegundaParte from "./screens/cadastro/SegundaParte";
 import ResetPasswordScreen from "./screens/ResetPasswordScreen/ResetPassword";
 import DadosdoUsuario from "./screens/dadosdoUsuario/Dados";
 import MapScreen from "./screens/mapa/mapaScreen";
-import { TouchableOpacity, StyleSheet, Image, StatusBar } from "react-native";
 import Cadastro from "./screens/cadastro/CadastroScreen";
 import Audio from "./screens/audio/Audio";
 import Emergencia from "./screens/ContatosdeEmergencia/ContatosEmergencia";
 import { getAuth } from "firebase/auth";
-import { getDatabase, ref, child, get } from "firebase/database";
+import { getDatabase, ref, onValue } from "firebase/database";
 
 const Stack = createStackNavigator();
 const Drawer = createDrawerNavigator();
 
 const MainTabs = ({ navigation }) => {
-  const [perfilImage, setPerfilImage] = useState(null);
-  const [perfilNome, setPerfilNome] = useState(null);
-  const [perfilSobrenome, setPerfilSobrenome] = useState(null);
+  const [perfilData, setPerfilData] = useState(null);
 
-  const fetchUserProfile = async () => {
-    try {
-      const auth = getAuth();
-      const user = auth.currentUser;
+  useEffect(() => {
+    const auth = getAuth();
+    const user = auth.currentUser;
 
-      console.log(auth);
-
-      if (user) {
-        const dbref = ref(getDatabase());
-        console.log("Usuário autenticado:", user.uid);
-        const snapshot = await get(child(dbref, `users/${user.uid}`));
+    if (user) {
+      const dbRef = ref(getDatabase(), `users/${user.uid}`);
+      const unsubscribe = onValue(dbRef, (snapshot) => {
         if (snapshot.exists()) {
-          const userData = snapshot.val();
-          // console.log("Dados do usuário:", userData);
-          setPerfilImage(userData.foto);
-          setPerfilNome(userData.nome);
-          setPerfilSobrenome(userData.sobrenome);
+          setPerfilData(snapshot.val());
         } else {
           console.log("Nenhum dado encontrado para o usuário logado");
         }
-      } else {
-        console.log("Usuário não autenticado");
-      }
-    } catch (error) {
-      console.error("Erro ao obter dados do perfil:", error);
+      });
+
+      // Cleanup subscription on unmount
+      return () => unsubscribe();
+    } else {
+      console.log("Usuário não autenticado");
+    }
+  }, []);
+
+  const getAvatarUrl = () => {
+    const { foto, nome } = perfilData || {};
+
+    if (foto && foto !== "") {
+      return foto;
+    } else {
+      return `https://avatar.iran.liara.run/public/girl?username=${encodeURIComponent(
+        nome || ""
+      )}`;
     }
   };
-
-  useEffect(() => {
-    navigation.addListener("focus", () => fetchUserProfile());
-  }, [navigation]);
 
   return (
     <Drawer.Navigator
       screenOptions={{
         drawerStyle: {
           backgroundColor: "#3c0c7b",
-          width: 250,
+          width: 210,
         },
         drawerActiveTintColor: "#9344fa",
         drawerInactiveTintColor: "#fff",
         itemStyle: { marginVertical: 5 },
-        drawerLabelStyle: { fontSize: 16, paddingVertical: 3 },
+        drawerLabelStyle: { fontSize: 18, paddingVertical: 3 },
         headerStyle: {
-          height: 95,
+          height: 90,
           backgroundColor: "#9344fa",
         },
         headerTintColor: "#fff",
@@ -86,18 +85,12 @@ const MainTabs = ({ navigation }) => {
           >
             <Image
               source={{
-                uri:
-                  perfilImage ||
-                  `https://avatar.iran.liara.run/username?username=${
-                    perfilNome + "+" + perfilSobrenome
-                  }`,
+                uri: getAvatarUrl(),
               }}
               style={{
-                width: 55,
-                height: 55,
+                width: 50,
+                height: 50,
                 borderRadius: 100,
-                borderWidth: 1.5,
-                borderColor: "#fff",
               }}
             />
           </TouchableOpacity>
@@ -217,6 +210,7 @@ const App = () => {
           component={DadosdoUsuario}
           options={{
             title: "Seus Dados",
+            headerTitleAlign: "center",
             headerStyle: {
               backgroundColor: "#9344fa",
             },
@@ -233,6 +227,7 @@ const App = () => {
           component={PerfilScreen}
           options={{
             title: "Perfil",
+            headerTitleAlign: "center",
             headerStyle: {
               backgroundColor: "#9344fa",
             },

@@ -84,15 +84,15 @@ const Inicio = () => {
         allowsRecordingIOS: true,
         playsInSilentModeIOS: true,
       });
-
+  
       console.log('Starting recording..');
       const { recording } = await Audio.Recording.createAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY); 
       setRecording(recording);
       console.log('Recording started');
-
+  
       const auth = getAuth();
       const user = auth.currentUser;
-
+  
       if (user) {
         const dbref = ref(getDatabase());
         const novoPerfil = {
@@ -102,7 +102,7 @@ const Inicio = () => {
           latitude: userLocation?.coords.latitude || '',
           longitude: userLocation?.coords.longitude || ''
         };
-
+  
         await update(child(dbref, `users/${user.uid}`), novoPerfil);
       } else {
         console.log("Usuário não autenticado");
@@ -111,6 +111,7 @@ const Inicio = () => {
       console.error('Failed to start recording', err);
     }
   }
+  
 
   async function stopRecording() {
     console.log('Stopping recording..');

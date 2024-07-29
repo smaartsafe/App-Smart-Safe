@@ -20,19 +20,13 @@ import {
 import { FontAwesome } from "@expo/vector-icons";
 import { format } from "date-fns";
 import { Audio } from "expo-av";
-import Slider from '@react-native-community/slider';
+import Slider from "@react-native-community/slider";
 
 const AudioScreen = () => {
   const [audioList, setAudioList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [userUid, setUserUid] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [soundObject, setSoundObject] = useState(null);
-  const [audioStatus, setAudioStatus] = useState({
-    isPlaying: false,
-    positionMillis: 0,
-    durationMillis: 0,
-  });
 
   useEffect(() => {
     fetchUserUid();
@@ -82,12 +76,15 @@ const AudioScreen = () => {
             createdAt,
             audioNumber,
             durationMillis: status.durationMillis,
+            url,
           };
         })
       );
 
       // Ordena os áudios pelo mais recente primeiro
-      audioListWithMetadata.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      audioListWithMetadata.sort(
+        (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+      );
 
       setAudioList(audioListWithMetadata);
     } catch (error) {
@@ -101,68 +98,6 @@ const AudioScreen = () => {
 
   const handleRefresh = () => {
     fetchAudioList(userUid);
-  };
-
-  const playAudio = async (audioNumber) => {
-    try {
-      if (soundObject) {
-        await soundObject.unloadAsync();
-      }
-  
-      const storage = getStorage();
-      const audioRef = ref(storage, `recordings/${userUid}/${audioNumber}`);
-      const url = await getDownloadURL(audioRef);
-  
-      const newSoundObject = new Audio.Sound();
-      await newSoundObject.loadAsync({
-        uri: url,
-        positionMillis: audioStatus.positionMillis,
-      });
-  
-      setSoundObject(newSoundObject);
-  
-      if (!audioStatus.isPlaying && audioStatus.positionMillis > 0) {
-        await newSoundObject.playFromPositionAsync(audioStatus.positionMillis);
-      } else {
-        await newSoundObject.playAsync();
-      }
-  
-      newSoundObject.setOnPlaybackStatusUpdate(onPlaybackStatusUpdate);
-    } catch (error) {
-      console.error("Erro ao reproduzir áudio:", error);
-      Alert.alert("Erro", "Falha ao reproduzir o áudio");
-    }
-  };
-  
-  const onPlaybackStatusUpdate = (status) => {
-    if (status.isLoaded) {
-      setAudioStatus((prevStatus) => ({
-        ...prevStatus,
-        isPlaying: status.isPlaying,
-        positionMillis: status.positionMillis,
-        durationMillis: status.durationMillis,
-      }));
-  
-      if (status.didJustFinish && audioStatus.isPlaying) {
-        setAudioStatus({
-          isPlaying: false,
-          positionMillis: 0,
-          durationMillis: 0,
-        });
-      }
-    }
-  };
-  
-
-  const pauseAudio = async () => {
-    try {
-      if (soundObject) {
-        await soundObject.pauseAsync();
-      }
-    } catch (error) {
-      console.error("Erro ao pausar áudio:", error);
-      Alert.alert("Erro", "Falha ao pausar o áudio");
-    }
   };
 
   const deleteAudio = async (audioNumber) => {
@@ -218,39 +153,116 @@ const AudioScreen = () => {
       setLoading(false);
     }
   };
-  
+
   const formatTime = (millis) => {
     const minutes = Math.floor(millis / 60000);
     const seconds = ((millis % 60000) / 1000).toFixed(0);
     return `${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
   };
 
-  const AudioItem = ({ createdAt, audioNumber, durationMillis }) => {
+  const AudioItem = ({ createdAt, audioNumber, durationMillis, url }) => {
     const [sliderValue, setSliderValue] = useState(0);
+    const [soundObject, setSoundObject] = useState(null);
+    const [audioStatus, setAudioStatus] = useState({
+      isPlaying: false,
+      positionMillis: 0,
+      durationMillis: durationMillis,
+    });
+
+    useEffect(() => {
+      return () => {
+        if (soundObject) {
+          soundObject.unloadAsync();
+        }
+      };
+    }, [soundObject]);
 
     useEffect(() => {
       if (audioStatus.isPlaying) {
-        const interval = setInterval(() => {
-          setSliderValue((prevValue) => {
-            const newValue = prevValue + 1000; // Incremento de 1000 milissegundos (1 segundo)
-            if (newValue > durationMillis) {
+        const interval = setInterval(async () => {
+          if (soundObject) {
+            const status = await soundObject.getStatusAsync();
+            if (status.isPlaying) {
+              setSliderValue(status.positionMillis);
+              setAudioStatus((prevStatus) => ({
+                ...prevStatus,
+                positionMillis: status.positionMillis,
+              }));
+            } else {
               clearInterval(interval);
-              return durationMillis;
             }
-            return newValue;
-          });
+          }
         }, 1000);
         return () => clearInterval(interval);
       } else {
-        setSliderValue(0);
+        setSliderValue(0); // Reset slider when not playing
       }
-    }, [audioStatus.isPlaying, durationMillis]);
+    }, [audioStatus.isPlaying, soundObject]);
+
+    const playAudio = async () => {
+      try {
+        let newSoundObject = soundObject;
+
+        if (!newSoundObject) {
+          newSoundObject = new Audio.Sound();
+          await newSoundObject.loadAsync({
+            uri: url,
+            positionMillis: audioStatus.positionMillis,
+          });
+          setSoundObject(newSoundObject);
+        }
+
+        await newSoundObject.playAsync();
+        newSoundObject.setOnPlaybackStatusUpdate(onPlaybackStatusUpdate);
+        setAudioStatus((prevStatus) => ({
+          ...prevStatus,
+          isPlaying: true,
+        }));
+      } catch (error) {
+        console.error("Erro ao reproduzir áudio:", error);
+        Alert.alert("Erro", "Falha ao reproduzir o áudio");
+      }
+    };
+
+    const pauseAudio = async () => {
+      try {
+        if (soundObject) {
+          await soundObject.pauseAsync();
+          setAudioStatus((prevStatus) => ({
+            ...prevStatus,
+            isPlaying: false,
+          }));
+        }
+      } catch (error) {
+        console.error("Erro ao pausar áudio:", error);
+        Alert.alert("Erro", "Falha ao pausar o áudio");
+      }
+    };
+
+    const onPlaybackStatusUpdate = (status) => {
+      if (status.isLoaded) {
+        if (status.didJustFinish) {
+          setAudioStatus((prevStatus) => ({
+            ...prevStatus,
+            isPlaying: false,
+            positionMillis: 0,
+          }));
+          setSliderValue(0); // Reset slider on finish
+        } else {
+          setAudioStatus((prevStatus) => ({
+            ...prevStatus,
+            positionMillis: status.positionMillis,
+          }));
+          setSliderValue(status.positionMillis);
+        }
+      }
+    };
 
     const handlePlayPause = async () => {
       if (audioStatus.isPlaying) {
         await pauseAudio();
       } else {
-        await playAudio(audioNumber);
+        await playAudio();
       }
     };
 
@@ -258,11 +270,11 @@ const AudioScreen = () => {
       try {
         if (soundObject) {
           await soundObject.setPositionAsync(value);
+          setSliderValue(value);
           setAudioStatus((prevStatus) => ({
             ...prevStatus,
             positionMillis: value,
           }));
-          setSliderValue(value);
         }
       } catch (error) {
         console.error("Erro ao ajustar posição do áudio:", error);
@@ -298,77 +310,69 @@ const AudioScreen = () => {
           >
             <FontAwesome
               name={audioStatus.isPlaying ? "pause" : "play"}
-              size={26}
-              color="white"
+              size={24}
+              color="#4CAF50"
             />
           </TouchableOpacity>
-        </View>
-        <View style={styles.audioInfoContainer}>
-          <Text style={styles.audioInfo}>{formatDate(createdAt)}</Text>
           <Slider
-            style={styles.progressBar}
+            style={styles.slider}
+            minimumValue={0}
+            maximumValue={audioStatus.durationMillis}
             value={sliderValue}
-            maximumValue={durationMillis}
-            minimumTrackTintColor="#FFFFFF"
+            onValueChange={handleSliderChange}
+            minimumTrackTintColor="#4CAF50"
             maximumTrackTintColor="#000000"
-            thumbTintColor="#FFFFFF"
-            onValueChange={setSliderValue}
-            onSlidingComplete={handleSliderChange}
+            thumbTintColor="#4CAF50"
           />
-          <View style={styles.timeContainer}>
-            <Text style={styles.timeText}>{formatTime(sliderValue)}</Text>
-            <Text style={styles.timeText}>{formatTime(durationMillis)}</Text>
-          </View>
+          <TouchableOpacity
+            style={styles.audioControls}
+            onPress={confirmDelete}
+          >
+            <FontAwesome name="trash" size={24} color="red" />
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity
-          style={styles.audioControls}
-          onPress={confirmDelete}
-        >
-          <FontAwesome name="trash" size={26} color="white" />
-        </TouchableOpacity>
+        <View style={styles.audioInfo}>
+          <Text style={styles.audioDate}>{formatDate(createdAt)}</Text>
+          <Text style={styles.audioDuration}>
+            {formatTime(audioStatus.durationMillis)}
+          </Text>
+        </View>
       </View>
     );
   };
 
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#9344fa" />
-      </View>
-    );
-  }
+  const renderAudioItem = ({ item }) => (
+    <AudioItem
+      createdAt={item.createdAt}
+      audioNumber={item.audioNumber}
+      durationMillis={item.durationMillis}
+      url={item.url}
+    />
+  );
 
   return (
     <View style={styles.container}>
-      <View style={styles.options}>
-        <TouchableOpacity style={styles.refreshButton} onPress={handleRefresh}>
-          <FontAwesome name="refresh" size={26} color="white" />
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.deleteAllButton}
-          onPress={confirmDeleteAll}
-        >
-          <FontAwesome name="trash" size={26} color="white" />
-          <Text style={styles.deleteAllButtonText}>Apagar Todos</Text>
-        </TouchableOpacity>
-      </View>
-
-      <FlatList
-        data={audioList}
-        renderItem={({ item }) => (
-          <AudioItem
-            createdAt={item.createdAt}
-            audioNumber={item.audioNumber}
-            durationMillis={item.durationMillis}
-          />
-        )}
-        keyExtractor={(item, index) => index.toString()}
-        ListEmptyComponent={
-          <Text style={styles.emptyListText}>Nenhum áudio disponível</Text>
-        }
-        refreshing={refreshing}
-        onRefresh={handleRefresh}
-      />
+      <Text style={styles.title}>Seus Áudios Gravados</Text>
+      {loading ? (
+        <ActivityIndicator size="large" color="#4CAF50" />
+      ) : (
+        <FlatList
+          data={audioList}
+          renderItem={renderAudioItem}
+          keyExtractor={(item) => item.audioNumber}
+          refreshing={refreshing}
+          onRefresh={handleRefresh}
+          ListEmptyComponent={
+            <Text style={styles.noAudioText}>Nenhum áudio encontrado</Text>
+          }
+        />
+      )}
+      <TouchableOpacity
+        style={styles.deleteAllButton}
+        onPress={confirmDeleteAll}
+      >
+        <Text style={styles.deleteAllButtonText}>Excluir Todos os Áudios</Text>
+      </TouchableOpacity>
     </View>
   );
 };
@@ -376,74 +380,70 @@ const AudioScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    padding: 16,
     backgroundColor: "#3c0c7b",
-    padding: 10,
   },
-  options: {
-    width: "100%",
-    flexDirection: "row-reverse",
-    justifyContent: "space-between",
-    marginBottom: 20,
-  },
-  refreshButton: {
-    padding: 10,
-    backgroundColor: "#9344fa",
-    borderRadius: 50,
-  },
-  deleteAllButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#9344fa",
-    padding: 10,
-    borderRadius: 50,
-  },
-  deleteAllButtonText: {
+  title: {
+    fontSize: 24,
+    fontWeight: "bold",
+    marginBottom: 16,
+    textAlign: "center",
     color: "white",
-    marginLeft: 5,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
   },
   audioItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#9344fa",
-    borderRadius: 10,
-    padding: 20,
-    marginBottom: 15,
-    justifyContent: "space-between",
-  },
-  audioInfoContainer: {
-    flex: 1,
-  },
-  audioInfo: {
-    color: "#fff",
-    fontSize: 16,
-  },
-  progressBar: {
-    width: "100%",
-    height: 40,
-  },
-  timeContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  timeText: {
-    color: "#fff",
-    fontSize: 12,
+    backgroundColor: "#f9f9f9",
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   controlsContainer: {
     flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
   },
   audioControls: {
-    marginLeft: 10,
+    marginHorizontal: 8,
   },
-  emptyListText: {
-    color: "#fff",
-    fontSize: 18,
+  slider: {
+    flex: 1,
+  },
+  audioInfo: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  audioNumber: {
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  audioDate: {
+    fontSize: 14,
+    color: "#666",
+  },
+  audioDuration: {
+    fontSize: 14,
+    color: "#666",
+  },
+  noAudioText: {
     textAlign: "center",
+    color: "#666",
+    marginTop: 16,
+  },
+  deleteAllButton: {
+    backgroundColor: "#ff4c4c",
+    padding: 16,
+    borderRadius: 8,
+    alignItems: "center",
+    marginTop: 16,
+  },
+  deleteAllButtonText: {
+    color: "#fff",
+    fontWeight: "bold",
   },
 });
 

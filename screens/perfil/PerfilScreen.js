@@ -7,15 +7,15 @@ import {
   TouchableOpacity,
   Image,
   Alert,
-  ActivityIndicator,
-  Linking,
   Modal,
   Pressable,
 } from "react-native";
+import { useRoute } from "@react-navigation/native";
 import { getDatabase, get, ref, child, update } from "firebase/database";
 import { getAuth, signOut } from "firebase/auth";
 import * as SecureStore from "expo-secure-store";
-import Icon from "react-native-vector-icons/FontAwesome";
+import { Linking } from "react-native";
+
 import {
   getStorage,
   uploadBytesResumable,
@@ -25,14 +25,21 @@ import {
 import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
+import { ProgressBar } from "react-native-paper";
 
 const Perfil = ({ navigation }) => {
-  const [perfilData, setPerfilData] = useState(null);
+  const route = useRoute();
+  const [perfilData, setPerfilData] = useState(
+    route.params?.perfilData || null
+  );
   const [image, setImage] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [uploaded, setUploaded] = useState(false);
   const [loadingMap, setLoadingMap] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
+  const [location, setLocation] = useState("Carregando localização...");
+  const [watchingLocation, setWatchingLocation] = useState(null);
+  const [progress, setProgress] = useState(0);
 
   useEffect(() => {
     (async () => {
@@ -57,7 +64,77 @@ const Perfil = ({ navigation }) => {
 
   useEffect(() => {
     fetchUserProfile();
+    startLocationUpdates(); // Start watching location updates
+    return () => {
+      if (watchingLocation) {
+        watchingLocation.remove(); // Cleanup location updates
+      }
+    };
   }, []);
+
+  const startLocationUpdates = async () => {
+    try {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        throw new Error("Permissão de localização não concedida");
+      }
+
+      const locationSubscription = await Location.watchPositionAsync(
+        {
+          accuracy: Location.Accuracy.High,
+          timeInterval: 10000,
+          distanceInterval: 10,
+        },
+        (location) => {
+          setLocation(
+            `${location.coords.latitude}, ${location.coords.longitude}`
+          );
+        }
+      );
+
+      setWatchingLocation(locationSubscription);
+    } catch (error) {
+      console.error("Erro ao iniciar atualizações de localização:", error);
+      setLocation("Localização não disponível");
+    }
+  };
+  const fetchCurrentLocation = async () => {
+    try {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        throw new Error("Permissão de localização não concedida");
+      }
+
+      let location = await Location.getCurrentPositionAsync({});
+      setLocation(`${location.coords.latitude}, ${location.coords.longitude}`);
+    } catch (error) {
+      console.error("Erro ao obter coordenadas do usuário:", error);
+      setLocation("Localização não disponível");
+    }
+  };
+
+  // Use this function when you need to fetch the location
+  const handleFetchLocation = () => {
+    fetchCurrentLocation();
+  };
+
+  const getLocationCoordinates = async () => {
+    try {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        throw new Error("Permissão de localização não concedida");
+      }
+
+      let location = await Location.getCurrentPositionAsync({});
+      return {
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+      };
+    } catch (error) {
+      console.error("Erro ao obter coordenadas do usuário:", error);
+      throw error;
+    }
+  };
 
   const fetchUserProfile = async () => {
     try {
@@ -83,6 +160,21 @@ const Perfil = ({ navigation }) => {
     }
   };
 
+  const fetchLocation = async () => {
+    try {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        throw new Error("Permissão de localização não concedida");
+      }
+
+      let location = await Location.getCurrentPositionAsync({});
+      setLocation(`${location.coords.latitude}, ${location.coords.longitude}`);
+    } catch (error) {
+      console.error("Erro ao obter coordenadas do usuário:", error);
+      setLocation("Localização não disponível");
+    }
+  };
+
   const pickImage = async () => {
     try {
       let result = await ImagePicker.launchImageLibraryAsync({
@@ -94,13 +186,13 @@ const Perfil = ({ navigation }) => {
       if (!result.cancelled) {
         console.log(result.assets[0].uri);
         setImage(result.assets[0].uri);
-        await uploadImage(result.assets[0].uri); // Chama a função de upload diretamente
+        await uploadImage(result.assets[0].uri);
       }
     } catch (E) {
       console.log(E);
     }
   };
-  
+
   const takePhoto = async () => {
     try {
       const result = await ImagePicker.launchCameraAsync({
@@ -110,32 +202,32 @@ const Perfil = ({ navigation }) => {
       });
       if (!result.cancelled) {
         setImage(result.assets[0].uri);
-        await uploadImage(result.assets[0].uri); // Chama a função de upload diretamente
+        await uploadImage(result.assets[0].uri);
       }
     } catch (error) {
       console.error("Error taking photo:", error);
     }
   };
-  
+
   const uploadImage = async (uri) => {
     try {
       if (!uri) return;
       setUploading(true);
-  
       const auth = getAuth();
       const user = auth.currentUser;
       const storage = getStorage();
       const storageRef = sRef(storage, "fotos/" + Date.now() + user.uid);
       const response = await fetch(uri);
       const blob = await response.blob();
-  
+
       const uploadTask = uploadBytesResumable(storageRef, blob);
-  
+
       uploadTask.on(
         "state_changed",
         (snapshot) => {
           const progress =
             (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          setProgress(progress / 100); // Update progress
           console.log("Upload is " + progress + "% done");
         },
         (error) => {
@@ -145,7 +237,9 @@ const Perfil = ({ navigation }) => {
         () => {
           getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
             console.log("File available at", downloadURL);
-            update(ref(getDatabase(), `users/${user.uid}`), { foto: downloadURL })
+            update(ref(getDatabase(), `users/${user.uid}`), {
+              foto: downloadURL,
+            })
               .then(() => {
                 setUploading(false);
                 setUploaded(true);
@@ -163,7 +257,6 @@ const Perfil = ({ navigation }) => {
       setUploading(false);
     }
   };
-  
 
   const handleDataUser = () => {
     navigation.navigate("Dados do Usúario");
@@ -189,26 +282,23 @@ const Perfil = ({ navigation }) => {
       console.error("Erro ao fazer logout:", error);
     }
   };
-  const removePhoto = () => {
-    setImage(null);
-    setPerfilData((prevData) => ({ ...prevData, foto: "" }));
-  };
 
-  const getLocationCoordinates = async () => {
+  const removePhoto = async () => {
     try {
-      let { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") {
-        throw new Error("Permissão de localização não concedida");
+      const auth = getAuth();
+      const user = auth.currentUser;
+      if (user) {
+        const dbref = ref(getDatabase(), `users/${user.uid}`);
+        await update(dbref, { foto: "" });
+        setImage(null);
+        setPerfilData((prevData) => ({ ...prevData, foto: "" }));
+        fetchUserProfile();
+        console.log("Foto de perfil removida com sucesso.");
+      } else {
+        console.log("Usuário não autenticado");
       }
-
-      let location = await Location.getCurrentPositionAsync({});
-      return {
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-      };
     } catch (error) {
-      console.error("Erro ao obter coordenadas do usuário:", error);
-      throw error;
+      console.error("Erro ao remover foto de perfil:", error);
     }
   };
 
@@ -227,8 +317,8 @@ const Perfil = ({ navigation }) => {
         );
       }
     } catch (error) {
-      console.error("Erro ao abrir o Google Maps:", error);
-      Alert.alert("Erro", "Não foi possível abrir o Google Maps.");
+      console.error("Erro ao abrir o mapa:", error);
+      Alert.alert("Erro", "Não foi possível abrir o mapa.");
     } finally {
       setLoadingMap(false);
     }
@@ -243,59 +333,106 @@ const Perfil = ({ navigation }) => {
               uri:
                 image ||
                 (perfilData && perfilData.foto !== "" && perfilData.foto) ||
-                `https://avatar.iran.liara.run/username?username=${
-                  perfilData && perfilData.nome + "+" + perfilData.sobrenome
-                } `,
+                `https://avatar.iran.liara.run/public/girl?username=${encodeURIComponent(
+                  perfilData?.nome || ""
+                )}`,
             }}
             style={{
-              width: 120,
-              height: 120,
-              borderRadius: 100,
-              borderWidth: 2,
-              borderColor: "#fff",
+              width: 200,
+              height: 200,
+              borderRadius: 200 / 2,
+              borderWidth: 5,
+              borderColor: "#ccc",
             }}
           />
         </TouchableOpacity>
-        {uploading && <ActivityIndicator />}
-        {perfilData == null ? (
-          <ActivityIndicator />
-        ) : (
-          <View style={styles.profileInfo}>
-            <Text style={styles.name}>
-              {perfilData ? `${perfilData.nome} ${perfilData.sobrenome}` : ""}
-            </Text>
-            <Text style={styles.email}>{perfilData && perfilData.email}</Text>
+        <Text style={styles.profileName}>
+          {perfilData ? perfilData.nome : "Carregando..."}
+        </Text>
+        <Text style={styles.profileInfo}>
+          {perfilData ? perfilData.email : "Carregando..."}
+        </Text>
+      </View>
+
+      <View style={styles.profileDataContainer}>
+        <Text style={styles.profileLabel}>Dados Pessoais:</Text>
+        {perfilData && (
+          <View style={styles.profileDataList}>
+            <View style={styles.profileDataItem}>
+              <Ionicons name="person" size={20} color="#6200ee" />
+              <Text style={styles.profileDataText}>
+                Nome: {perfilData.nome}
+              </Text>
+            </View>
+            <View style={styles.profileDataItem}>
+              <Ionicons name="person-outline" size={20} color="#6200ee" />
+              <Text style={styles.profileDataText}>
+                Sobrenome: {perfilData.sobrenome}
+              </Text>
+            </View>
+            <View style={styles.profileDataItem}>
+              <Ionicons name="mail" size={20} color="#6200ee" />
+              <Text style={styles.profileDataText}>
+                Email: {perfilData.email}
+              </Text>
+            </View>
+            <View style={styles.profileDataItem}>
+              <Ionicons name="card" size={20} color="#6200ee" />
+              <Text style={styles.profileDataText}>CPF: {perfilData.cpf}</Text>
+            </View>
+            <View style={styles.profileDataItem}>
+              <Ionicons name="location-outline" size={20} color="#6200ee" />
+              <Text style={styles.profileDataText}>
+                Estado: {perfilData.estado}
+              </Text>
+            </View>
+            <View style={styles.profileDataItem}>
+              <Ionicons name="location-sharp" size={20} color="#6200ee" />
+              <Text style={styles.profileDataText}>
+                Cidade: {perfilData.cidade}
+              </Text>
+            </View>
+            <View style={styles.profileDataItem}>
+              <Ionicons name="home" size={20} color="#6200ee" />
+              <Text style={styles.profileDataText}>Rua: {perfilData.rua}</Text>
+            </View>
+            <View style={styles.profileDataItem}>
+              <Ionicons name="mail-open" size={20} color="#6200ee" />
+              <Text style={styles.profileDataText}>CEP: {perfilData.cep}</Text>
+            </View>
+            <View style={styles.profileDataItem}>
+              <Ionicons name="calendar" size={20} color="#6200ee" />
+              <Text style={styles.profileDataText}>
+                Data de Nascimento: {perfilData.dataNascimento}
+              </Text>
+            </View>
+            <View style={styles.profileDataItem}>
+              <Ionicons name="location" size={20} color="#6200ee" />
+              <Text style={styles.dataLabel}>Localização:</Text>
+              <Text style={styles.dataValue}>{location}</Text>
+            </View>
           </View>
         )}
-
-        <View style={styles.rowContainer}>
-          <TouchableOpacity
-            onPress={handleDataUser}
-            style={styles.rowContainer}
-          >
-            <Text style={styles.dataUser}>Ver Dados Completos</Text>
-            <Ionicons name="arrow-forward" size={24} color="white" />
-          </TouchableOpacity>
-        </View>
       </View>
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity
-          onPress={handleGoToMap}
-          style={[styles.button, { backgroundColor: "#4CAF50" }]}
-          disabled={loadingMap}
-        >
-          <Icon name="map" size={20} color="white" />
-          <Text style={styles.buttonText}>
-            {loadingMap ? "Carregando o mapa..." : "Ir para o Mapa"}
-          </Text>
-        </TouchableOpacity>
 
-        <TouchableOpacity
-          onPress={handleLogout}
-          style={[styles.button, { backgroundColor: "#FF5722" }]}
-        >
-          <Icon name="sign-out" size={20} color="white" />
-          <Text style={styles.buttonText}>Sair da conta</Text>
+      <View style={styles.buttonsContainer}>
+        <TouchableOpacity style={styles.button} onPress={handleDataUser}>
+          <Ionicons name="person" size={20} color="#fff" />
+          <Text style={styles.buttonText}>Editar Perfil</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.button} onPress={handleLogout}>
+          <Ionicons name="log-out" size={20} color="#fff" />
+          <Text style={styles.buttonText}>Sair</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.button} onPress={handleGoToMap}>
+          {loadingMap ? (
+            <ProgressBar style={{ flex: 1 }} progress={progress} color="#fff" />
+          ) : (
+            <>
+              <Ionicons name="map" size={20} color="#fff" />
+              <Text style={styles.buttonText}>Ver no Mapa</Text>
+            </>
+          )}
         </TouchableOpacity>
       </View>
 
@@ -308,39 +445,32 @@ const Perfil = ({ navigation }) => {
         }}
       >
         <View style={styles.modalContainer}>
-          <View style={styles.modalView}>
-            <Pressable
-              style={[styles.modalButton, styles.buttonClose]}
-              onPress={() => {
-                takePhoto();
-                setModalVisible(!modalVisible);
-              }}
-            >
-              <Text style={styles.textStyle}>Tirar Foto Agora</Text>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Escolha uma opção:</Text>
+            <Pressable style={styles.modalOption} onPress={takePhoto}>
+              <Ionicons name="camera" size={24} color="#6200ee" />
+              <Text style={styles.modalOptionText}>Tirar Foto</Text>
+            </Pressable>
+            <Pressable style={styles.modalOption} onPress={pickImage}>
+              <Ionicons name="images" size={24} color="#6200ee" />
+              <Text style={styles.modalOptionText}>Escolher da Galeria</Text>
             </Pressable>
             <Pressable
-              style={[styles.modalButton, styles.buttonClose]}
-              onPress={() => {
-                pickImage();
-                setModalVisible(!modalVisible);
-              }}
-            >
-              <Text style={styles.textStyle}>Escolher Foto da Galeria</Text>
-            </Pressable>
-            <Pressable
-              style={[styles.modalButton, styles.buttonClose]}
-              onPress={() => {
-                removePhoto();
-                setModalVisible(!modalVisible);
-              }}
-            >
-              <Text style={styles.textStyle}>Remover Foto de Perfil</Text>
-            </Pressable>
-            <Pressable
-              style={[styles.modalButton, styles.buttonClose]}
+              style={[styles.modalOption, styles.modalOptionCancel]}
               onPress={() => setModalVisible(!modalVisible)}
             >
-              <Text style={styles.textStyle}>Cancelar</Text>
+              <Ionicons name="close" size={24} color="#6200ee" />
+              <Text style={styles.modalOptionText}>Cancelar</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.modalOption, styles.modalOptionRemove]}
+              onPress={() => {
+                setModalVisible(!modalVisible);
+                removePhoto();
+              }}
+            >
+              <Ionicons name="trash" size={24} color="#fff" />
+              <Text style={styles.modalOptionText}>Remover Foto</Text>
             </Pressable>
           </View>
         </View>
@@ -352,113 +482,110 @@ const Perfil = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
     backgroundColor: "#3c0c7b",
   },
   profileContainer: {
-    display: "flex",
-    backgroundColor: "#9344fa",
-    gap: 15,
-    flexDirection: "column",
-    padding: 20,
+    justifyContent: "center",
     alignItems: "center",
-    borderTopWidth: 0.5,
-    borderColor: "#0008",
+    marginBottom: 20,
   },
-  dataUser: {
-    fontWeight: "bold",
-    color: "white",
-    marginRight: 5,
-  },
-  rowContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#333",
-    paddingHorizontal: 5,
-    paddingVertical: 2.5,
-    borderRadius: 15,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: "bold",
-    color: "#fff",
-  },
-  profileInfo: {
-    alignItems: "center",
-  },
-  enviarFoto: {
-    backgroundColor: "black",
-    paddingVertical: 5,
-    paddingHorizontal: 15,
-    borderRadius: 20,
-    alignItems: "center",
-  },
-  textEnviarFoto: {
-    color: "white",
-    fontSize: 14,
-  },
-  name: {
+  profileName: {
     fontSize: 20,
     fontWeight: "bold",
-    marginBottom: 5,
+    marginTop: 10,
     color: "white",
   },
-  email: {
+  profileInfo: {
+    fontSize: 16,
+    color: "#666",
+    color: "white",
+  },
+  profileDataContainer: {
+    width: "100%",
+    padding: 20,
+    backgroundColor: "#f5f5f5",
+    borderRadius: 10,
+    marginBottom: 20,
+  },
+  profileLabel: {
     fontSize: 18,
-    color: "white",
+    fontWeight: "bold",
+    marginBottom: 10,
   },
-  buttonContainer: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    marginTop: 20,
+  profileDataList: {
+    marginTop: 10,
   },
-  button: {
+  profileDataItem: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 5,
+    marginBottom: 10,
+  },
+  profileDataText: {
+    fontSize: 16,
+    color: "#333",
+    marginLeft: 10,
+  },
+  buttonsContainer: {
+    width: "100%",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  button: {
+    backgroundColor: "#9344fa",
+    width: "100%",
+    padding: 15,
+    borderRadius: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 10,
   },
   buttonText: {
-    marginLeft: 10,
-    color: "white",
+    color: "#fff",
     fontSize: 16,
-    fontWeight: "bold",
+    marginLeft: 10,
   },
   modalContainer: {
     flex: 1,
     justifyContent: "flex-end",
-    alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    backgroundColor: "rgba(0, 0, 0, 0.5)", // Fundo escuro translúcido
   },
-  modalView: {
-    width: "100%",
-    backgroundColor: "#222",
+  modalContent: {
+    backgroundColor: "white",
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    paddingVertical: 20,
+    padding: 20,
     alignItems: "center",
-    // shadowColor: "#000",
-    // shadowOffset: {
-    //   width: 0,
-    //   height: 2,
-    // },
-    // shadowOpacity: 0.25,
-    // shadowRadius: 4,
-    // elevation: 5,
+    elevation: 5,
   },
-  modalButton: {
-    borderRadius: 10,
-    padding: 10,
-    width: "90%",
-    marginBottom: 15,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: 'white'
-  },
-  textStyle: {
-    color: "white",
+  modalTitle: {
+    fontSize: 18,
     fontWeight: "bold",
+    marginBottom: 15,
     textAlign: "center",
+  },
+  modalOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 10,
+    width: "100%",
+    backgroundColor: "#f5f5f5",
+  },
+  modalOptionText: {
+    fontSize: 16,
+    marginLeft: 10,
+    color: "#333",
+  },
+  modalOptionCancel: {
+    backgroundColor: "#ccc",
+  },
+  modalOptionRemove: {
+    backgroundColor: "#ff4444",
   },
 });
 

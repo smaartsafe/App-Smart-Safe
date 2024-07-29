@@ -27,6 +27,19 @@ const AdicionarContatoScreen = () => {
   const [allContacts, setAllContacts] = useState([]);
   const [userId, setUserId] = useState(null);
 
+  const formatPhoneNumber = (phoneNumber) => {
+    // Remove caracteres não numéricos
+    let cleaned = phoneNumber.replace(/\D/g, "");
+
+    // Verifica se o número possui 11 dígitos (indicando o nono dígito)
+    if (cleaned.length === 11) {
+      // Remove o nono dígito
+      cleaned = cleaned.substring(0, 2) + cleaned.substring(3);
+    }
+
+    return cleaned;
+  };
+
   useEffect(() => {
     const requestContactsPermission = async () => {
       try {
@@ -81,7 +94,7 @@ const AdicionarContatoScreen = () => {
       const formattedContact = {
         id: addedContacts.length,
         name,
-        phoneNumber: phoneNumbers && phoneNumbers.length > 0 ? phoneNumbers[0].number : "",
+        phoneNumber: phoneNumbers && phoneNumbers.length > 0 ? formatPhoneNumber(phoneNumbers[0].number) : "",
       };
       setAddedContacts([...addedContacts, formattedContact]);
       sendContactToDatabase(formattedContact);
@@ -131,15 +144,17 @@ const AdicionarContatoScreen = () => {
   };
 
   const handleCallContact = (phoneNumber) => {
-    Linking.openURL(`tel:${phoneNumber}`);
+    const formattedPhoneNumber = formatPhoneNumber(phoneNumber);
+    Linking.openURL(`tel:${formattedPhoneNumber}`);
   };
 
   const handleSendSMS = async (phoneNumber) => {
     try {
       const isAvailable = await SMS.isAvailableAsync();
       if (isAvailable) {
-        await SMS.sendSMSAsync(phoneNumber, "Sua mensagem aqui");
-        console.log("Mensagem enviada com sucesso para:", phoneNumber);
+        const formattedPhoneNumber = formatPhoneNumber(phoneNumber);
+        await SMS.sendSMSAsync(formattedPhoneNumber, "Sua mensagem aqui");
+        console.log("Mensagem enviada com sucesso para:", formattedPhoneNumber);
       } else {
         console.log("SMS is not available on this device");
       }
@@ -245,208 +260,195 @@ const AdicionarContatoScreen = () => {
             onPress={() => handleSendSMS(item.phoneNumbers[0].number)}
           >
             <Ionicons
-              name="chatbox"
+              name="chatbubble"
               size={24}
               color="#008080"
               style={styles.actionIcon}
             />
           </TouchableOpacity>
           <TouchableOpacity onPress={() => handleDeleteContact(index)}>
-            <Ionicons name="trash-outline" size={24} color="#ff0000" />
+            <Ionicons
+              name="trash-bin"
+              size={24}
+              color="#ff0000"
+              style={styles.actionIcon}
+            />
           </TouchableOpacity>
         </View>
       </View>
     </View>
   );
 
-  const handleDeleteAllContacts = () => {
-    setAddedContacts([]);
-    sendContactsToDatabase([]);
-  };
-
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
+      <View style={styles.addedContactsContainer}>
+        <Text style={styles.title}>Contatos Adicionados</Text>
+        <FlatList
+          data={addedContacts}
+          renderItem={renderAddedContactItem}
+          keyExtractor={(item, index) => index.toString()}
+        />
+      </View>
+
       <TouchableOpacity
+        style={styles.addContactButton}
         onPress={() => setShowContactListModal(true)}
-        style={styles.addButton}
       >
-        <Text style={styles.addButtonText}>Adicionar Contatos</Text>
-        <Ionicons name="person-add" size={28} color="white" />
+        <Text style={styles.addContactButtonText}>Adicionar Contato</Text>
       </TouchableOpacity>
-      <TouchableOpacity onPress={handleDeleteAllContacts}>
-        <Text style={styles.deleteAllButton}>Apagar Todos</Text>
-      </TouchableOpacity>
-      <Text style={styles.sectionTitle}>Contatos Adicionados</Text>
-      <FlatList
-        data={addedContacts}
-        renderItem={renderAddedContactItem}
-        keyExtractor={(item, index) => index.toString()}
-        style={styles.contactList}
-      />
-      <Modal
-        visible={showContactListModal}
-        animationType="slide"
-        transparent={false}
-        onRequestClose={() => setShowContactListModal(false)}
-      >
+
+      <Modal visible={showContactListModal} animationType="slide">
         <SafeAreaView style={styles.modalContainer}>
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Pesquisar Contatos"
-            value={searchTerm}
-            onChangeText={handleSearch}
-          />
-          {selectedContacts.length === 0 && (
-            <View style={styles.noContactsContainer}>
-              <Text style={styles.noContactsText}>Adicione algum contato</Text>
-            </View>
-          )}
-          {selectedContacts.length > 0 && (
-            <FlatList
-              data={selectedContacts}
-              renderItem={renderContactItem}
-              keyExtractor={(item, index) => index.toString()}
-              style={styles.contactList}
+          <View style={styles.searchContainer}>
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Pesquisar contatos"
+              placeholderTextColor={'white'}
+              value={searchTerm}
+              onChangeText={handleSearch}
             />
-          )}
-          <View style={styles.modalButtons}>
-            <TouchableOpacity onPress={() => setShowContactListModal(false)}>
-              <Text style={styles.modalButtonText}>Fechar</Text>
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={() => {
+                setSearchTerm("");
+                setShowContactListModal(false);
+              }}
+            >
+              <Ionicons name="close" size={24} color="#000" />
             </TouchableOpacity>
           </View>
+          <FlatList
+            data={selectedContacts}
+            renderItem={renderContactItem}
+            keyExtractor={(item, index) => index.toString()}
+          />
         </SafeAreaView>
       </Modal>
-      <Modal
-        visible={showConfirmationModal}
-        animationType="fade"
-        transparent={true}
-        onRequestClose={() => setShowConfirmationModal(false)}
-      >
-        <View style={styles.confirmationModalContainer}>
+
+      <Modal visible={showConfirmationModal} animationType="slide">
+        <View style={styles.confirmationModal}>
           <Text style={styles.confirmationText}>{confirmationMessage}</Text>
+          <TouchableOpacity
+            style={styles.confirmationButton}
+            onPress={() => setShowConfirmationModal(false)}
+          >
+            <Text style={styles.confirmationButtonText}>Fechar</Text>
+          </TouchableOpacity>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
     backgroundColor: "#3c0c7b",
-    paddingVertical: 25,
-    paddingHorizontal: 10,
+    padding: 16,
   },
-  addButton: {
-    backgroundColor: "#9344fa",
-    padding: 20,
-    borderRadius: 10,
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 20,
-    elevation: 5,
-  },
-  addButtonText: {
-    fontSize: 18,
-    color: "white",
-    marginRight: 10,
-  },
-  searchInput: {
-    width: "100%",
-    backgroundColor: "#fff",
-    borderRadius: 10,
-    padding: 10,
+  title: {
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBottom: 10,
+    color: 'white',
     marginBottom: 20,
   },
-  contactList: {
+  addedContactsContainer: {
     flex: 1,
-    width: "100%",
+    backgroundColor: "#3c0c7b"
+  },
+  addContactButton: {
+    backgroundColor: "#4CAF50",
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 20,
+  },
+  addContactButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  contactContainer: {
+    marginBottom: 10,
   },
   contactItem: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 15,
-    paddingHorizontal: 10,
-    borderRadius: 10,
-    borderBottomWidth: 1,
-    borderColor: 'white',
+    justifyContent: "space-between",
+    backgroundColor: "#F5F5F5",
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderRadius: 8,
+    marginBottom: 15,
+
   },
   contactName: {
     fontSize: 16,
     fontWeight: "bold",
-    color: "white",
-  },
-  contactContainer: {
-    backgroundColor: "#9995",
-    borderRadius: 10,
-    marginVertical: 10,
   },
   contactNumber: {
     fontSize: 14,
-    color: "#ccc",
+    color: "#888888",
   },
   contactActions: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
   },
-  actionIcon: {},
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "white",
-    marginTop: 20,
+  actionIcon: {
+    marginLeft: 15,
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: "#3c0c7b",
-    paddingVertical: 25,
-    paddingHorizontal: 20,
+    padding: 16,
+    backgroundColor: "#3c0c7b"
+
   },
-  modalButtons: {
+  searchContainer: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 20,
-  },
-  modalButtonText: {
-    fontSize: 18,
-    color: "#fff",
-    fontWeight: "bold",
-  },
-  confirmationModalContainer: {
-    backgroundColor: "#fff",
-    borderRadius: 10,
-    padding: 20,
     alignItems: "center",
-    justifyContent: "center",
-    margin: 10,
-    elevation: 5,
-  },
-  confirmationText: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#008080",
     marginBottom: 10,
+    
   },
-  deleteAllButton: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#ff0000",
-    marginBottom: 10,
+  searchInput: {
+    flex: 1,
+    borderColor: "#CCCCCC",
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 10,
+    marginRight: 10,
   },
-  noContactsContainer: {
+  closeButton: {
+    padding: 10,
+  },
+  confirmationModal: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.5)",
   },
-  noContactsText: {
+  confirmationText: {
     fontSize: 18,
+    color: "#FFFFFF",
+    marginBottom: 20,
+    textAlign: "center",
+    paddingHorizontal: 20,
+    
+  },
+  confirmationButton: {
+    backgroundColor: "#4CAF50",
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  confirmationButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
     fontWeight: "bold",
-    color: "white",
   },
 });
 
