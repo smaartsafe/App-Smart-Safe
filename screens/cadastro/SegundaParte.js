@@ -77,7 +77,10 @@ const SegundaParte = () => {
   const getLocation = async () => {
     try {
       let location = await Location.getCurrentPositionAsync({});
-      retryReverseGeocodeAsync(location.coords.latitude, location.coords.longitude);
+      retryReverseGeocodeAsync(
+        location.coords.latitude,
+        location.coords.longitude
+      );
     } catch (error) {
       console.error("Erro ao obter localização:", error);
       Alert.alert("Erro", "Ocorreu um erro ao obter a localização.");
@@ -92,26 +95,33 @@ const SegundaParte = () => {
       if (address.length > 0) {
         setCep(address[0].postalCode || "");
         setEstado(address[0].region || "");
-        if (!cidade) {
-          setCidade(address[0].city || "");
-        }
+        
+        // Se a cidade for definida, usa ela, caso contrário, usa o distrito
+        const cityName = address[0].city || address[0].district || "";
+        setCidade(cityName);
+    
         setRua(address[0].street || "");
-        setBairro(address[0].district || ""); // Correção feita aqui
+        
+        // Define o bairro, garantindo que ele não será igual ao nome da cidade
+        const districtName = address[0].district && address[0].district !== cityName ? address[0].district : "";
+        setBairro(districtName);
+        
         console.log("Endereço obtido com sucesso:", address[0]);
-      }
+    }
+    
+      
     } catch (error) {
       console.error("Erro ao obter endereço:", error);
       if (retries > 0) {
         console.warn("Retrying reverse geocode...");
-        await new Promise(resolve => setTimeout(resolve, 2000)); // Espera 5 segundos antes de tentar novamente
+        await new Promise((resolve) => setTimeout(resolve, 2000)); // Espera 5 segundos antes de tentar novamente
         retryReverseGeocodeAsync(latitude, longitude, retries - 1);
       } else {
         console.error("Erro ao obter endereço após várias tentativas:", error);
         Alert.alert("Erro", "Ocorreu um erro ao obter o endereço.");
       }
     }
-};
-
+  };
 
   const handleFinalizarCadastro = async () => {
     try {
