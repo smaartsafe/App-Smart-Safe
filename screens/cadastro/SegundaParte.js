@@ -314,6 +314,7 @@ const SegundaParte = () => {
                 onChangeText={setConfirmarSenha}
                 secureTextEntry={!showPassword}
               />
+              <Text style={styles.placeholder}>(Use a mesma senha)</Text>
             </View>
           </View>
         </View>

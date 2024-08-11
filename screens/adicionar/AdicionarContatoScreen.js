@@ -15,7 +15,7 @@ import * as Contacts from "expo-contacts";
 import { getDatabase, ref, set, get, remove } from "firebase/database";
 import { getAuth } from "firebase/auth";
 import * as SMS from "expo-sms";
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect } from "@react-navigation/native";
 
 const AdicionarContatoScreen = () => {
   const [selectedContacts, setSelectedContacts] = useState([]);
@@ -28,6 +28,8 @@ const AdicionarContatoScreen = () => {
   const [userId, setUserId] = useState(null);
 
   const formatPhoneNumber = (phoneNumber) => {
+    if (!phoneNumber) return "";
+
     // Remove caracteres não numéricos
     let cleaned = phoneNumber.replace(/\D/g, "");
 
@@ -35,6 +37,11 @@ const AdicionarContatoScreen = () => {
     if (cleaned.length === 11) {
       // Remove o nono dígito
       cleaned = cleaned.substring(0, 2) + cleaned.substring(3);
+    }
+
+    // Adiciona o código do país se não estiver presente
+    if (!cleaned.startsWith("55")) {
+      cleaned = "55" + cleaned;
     }
 
     return cleaned;
@@ -94,7 +101,10 @@ const AdicionarContatoScreen = () => {
       const formattedContact = {
         id: addedContacts.length,
         name,
-        phoneNumber: phoneNumbers && phoneNumbers.length > 0 ? formatPhoneNumber(phoneNumbers[0].number) : "",
+        phoneNumber:
+          phoneNumbers && phoneNumbers.length > 0
+            ? formatPhoneNumber(phoneNumbers[0].number)
+            : "",
       };
       setAddedContacts([...addedContacts, formattedContact]);
       sendContactToDatabase(formattedContact);
@@ -194,13 +204,18 @@ const AdicionarContatoScreen = () => {
   };
 
   const renderContactItem = ({ item }) => {
-    if (!item.name || item.name.trim() === "" || item.name.toLowerCase() === "null") {
+    if (
+      !item.name ||
+      item.name.trim() === "" ||
+      item.name.toLowerCase() === "null"
+    ) {
       return null;
     }
 
-    const phoneNumber = item.phoneNumbers && item.phoneNumbers.length > 0
-      ? item.phoneNumbers[0].number
-      : "";
+    const phoneNumber =
+      item.phoneNumbers && item.phoneNumbers.length > 0
+        ? item.phoneNumbers[0].number
+        : "";
 
     if (!phoneNumber) {
       return null;
@@ -229,55 +244,56 @@ const AdicionarContatoScreen = () => {
     sendContactsToDatabase(updatedContacts);
   };
 
-  const renderAddedContactItem = ({ item, index }) => (
-    <View style={styles.contactContainer}>
-      <View style={styles.contactItem}>
-        <Text style={styles.contactName}>{item.name.substring(0, 14)}</Text>
-        {item.phoneNumbers && item.phoneNumbers.length > 0 && (
-          <Text style={styles.contactNumber}>
-            {item.phoneNumbers[0].number}
-          </Text>
-        )}
-        <View style={styles.contactActions}>
-          <Ionicons
-            name={item.favorited ? "star" : "star-outline"}
-            size={24}
-            color={item.favorited ? "#FFD700" : "#ccc"}
-            onPress={() => toggleFavorite(index)}
-          />
+  const renderAddedContactItem = ({ item, index }) => {
+    const phoneNumber = item.phoneNumber;
 
-          <TouchableOpacity
-            onPress={() => handleCallContact(item.phoneNumbers[0].number)}
-          >
+    return (
+      <View style={styles.contactContainer}>
+        <View style={styles.contactItem}>
+          <Text style={styles.contactName}>{item.name.substring(0, 14)}</Text>
+          <Text style={styles.contactNumber}>{phoneNumber}</Text>
+          <View style={styles.contactActions}>
             <Ionicons
-              name="call"
+              name={item.favorited ? "star" : "star-outline"}
               size={24}
-              color="#008080"
-              style={styles.actionIcon}
+              color={item.favorited ? "#FFD700" : "#ccc"}
+              onPress={() => toggleFavorite(index)}
             />
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => handleSendSMS(item.phoneNumbers[0].number)}
-          >
-            <Ionicons
-              name="chatbubble"
-              size={24}
-              color="#008080"
-              style={styles.actionIcon}
-            />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => handleDeleteContact(index)}>
-            <Ionicons
-              name="trash-bin"
-              size={24}
-              color="#ff0000"
-              style={styles.actionIcon}
-            />
-          </TouchableOpacity>
+            {phoneNumber ? (
+              <>
+                <TouchableOpacity
+                  onPress={() => handleCallContact(phoneNumber)}
+                >
+                  <Ionicons
+                    name="call"
+                    size={24}
+                    color="#008080"
+                    style={styles.actionIcon}
+                  />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => handleSendSMS(phoneNumber)}>
+                  <Ionicons
+                    name="chatbubble"
+                    size={24}
+                    color="#008080"
+                    style={styles.actionIcon}
+                  />
+                </TouchableOpacity>
+              </>
+            ) : null}
+            <TouchableOpacity onPress={() => handleDeleteContact(index)}>
+              <Ionicons
+                name="trash-bin"
+                size={24}
+                color="#ff0000"
+                style={styles.actionIcon}
+              />
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
-    </View>
-  );
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -303,7 +319,8 @@ const AdicionarContatoScreen = () => {
             <TextInput
               style={styles.searchInput}
               placeholder="Pesquisar contatos"
-              placeholderTextColor={'white'}
+              placeholderTextColor={"white"}
+              color={"white"}
               value={searchTerm}
               onChangeText={handleSearch}
             />
@@ -314,7 +331,7 @@ const AdicionarContatoScreen = () => {
                 setShowContactListModal(false);
               }}
             >
-              <Ionicons name="close" size={24} color="#000" />
+              <Ionicons name="close" size={24} color="#fff" />
             </TouchableOpacity>
           </View>
           <FlatList
@@ -350,12 +367,12 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "bold",
     marginBottom: 10,
-    color: 'white',
+    color: "white",
     marginBottom: 20,
   },
   addedContactsContainer: {
     flex: 1,
-    backgroundColor: "#3c0c7b"
+    backgroundColor: "#3c0c7b",
   },
   addContactButton: {
     backgroundColor: "#4CAF50",
@@ -383,7 +400,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     borderRadius: 8,
     marginBottom: 15,
-
   },
   contactName: {
     fontSize: 16,
@@ -403,14 +419,12 @@ const styles = StyleSheet.create({
   modalContainer: {
     flex: 1,
     padding: 16,
-    backgroundColor: "#3c0c7b"
-
+    backgroundColor: "#3c0c7b",
   },
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 10,
-    
   },
   searchInput: {
     flex: 1,
@@ -435,7 +449,6 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     textAlign: "center",
     paddingHorizontal: 20,
-    
   },
   confirmationButton: {
     backgroundColor: "#4CAF50",
