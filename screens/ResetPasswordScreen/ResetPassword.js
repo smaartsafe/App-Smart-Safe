@@ -12,7 +12,6 @@ const ResetPassword = ({ navigation }) => {
   const handleSendEmail = async () => { 
     try {
       const auth = getAuth();
-
       await sendPasswordResetEmail(auth, email);
       setResetPasswordMode(true);
       setSuccessMessage("Um e-mail com instruções para redefinir sua senha foi enviado para o seu endereço de e-mail.");
@@ -27,7 +26,7 @@ const ResetPassword = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-        <Ionicons name="arrow-back" size={24} color="black" />
+        <Ionicons name="arrow-back" size={24} color="white" />
         <Text style={styles.backText}>Voltar</Text>
       </TouchableOpacity>
       <Text style={styles.title}>Redefinir Senha</Text>
@@ -39,6 +38,7 @@ const ResetPassword = ({ navigation }) => {
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
+              placeholderTextColor="#cfcfcf"
             />
           </View>
           <TouchableOpacity style={styles.button} onPress={handleSendEmail}>
@@ -59,6 +59,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    backgroundColor: "#3c0c7b", // Cor roxa
   },
   backButton: {
     flexDirection: "row",
@@ -70,29 +71,32 @@ const styles = StyleSheet.create({
   backText: {
     fontSize: 16,
     marginLeft: 5,
+    color: "white",
   },
   title: {
     fontSize: 24,
     marginBottom: 20,
+    color: "white",
   },
   inputContainer: {
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 20,
-    height: 40, 
+    height: 40,
   },
   input: {
     flex: 1,
     borderWidth: 1,
-    borderColor: "gray",
+    borderColor: "#cfcfcf",
     borderRadius: 5,
     paddingHorizontal: 10,
     paddingVertical: 10,
     marginRight: 10,
     maxWidth: 250,
+    backgroundColor: "#ffffff", // Cor de fundo do input
   },
   button: {
-    backgroundColor: "black",
+    backgroundColor: "#6a1b9a", // Cor roxa mais escura
     paddingHorizontal: 15,
     borderRadius: 5,
     paddingVertical: 10,
@@ -104,14 +108,15 @@ const styles = StyleSheet.create({
   resetPasswordText: {
     fontSize: 16,
     textAlign: "center",
+    color: "white",
   },
   successMessage: {
-    color: "green",
+    color: "#4CAF50", // Verde
     textAlign: "center",
     marginTop: 10,
   },
   errorMessage: {
-    color: "red",
+    color: "#ff0000", // Vermelho
     textAlign: "center",
     marginTop: 10,
   },

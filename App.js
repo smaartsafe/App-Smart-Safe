@@ -241,7 +241,7 @@ const App = () => {
 
 const styles = StyleSheet.create({
   profileIcon: {
-    marginRight: 20,
+    marginRight: 15,
   },
 });
 
