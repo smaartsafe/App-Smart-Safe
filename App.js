@@ -39,7 +39,6 @@ const MainTabs = ({ navigation }) => {
         }
       });
 
-      // Cleanup subscription on unmount
       return () => unsubscribe();
     } else {
       console.log("Usuário não autenticado");

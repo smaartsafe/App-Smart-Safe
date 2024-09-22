@@ -375,7 +375,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#3c0c7b",
   },
   addContactButton: {
-    backgroundColor: "#4CAF50",
+    backgroundColor: "#9344fa",
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 8,
