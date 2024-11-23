@@ -23,7 +23,7 @@ import {
   ref as sRef,
 } from "firebase/storage";
 import * as ImagePicker from "expo-image-picker";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import * as Location from "expo-location";
 import { ProgressBar } from "react-native-paper";
 
@@ -46,7 +46,6 @@ const Perfil = ({ navigation }) => {
       try {
         const { status } =
           await ImagePicker.requestMediaLibraryPermissionsAsync();
-        console.log("Status das permissões:", status);
         if (status !== "granted") {
           Alert.alert(
             "Permissão necessária",
@@ -142,7 +141,6 @@ const Perfil = ({ navigation }) => {
       const user = auth.currentUser;
 
       if (user) {
-        console.log("Usuário autenticado:", user.uid);
         const dbref = ref(getDatabase());
         const snapshot = await get(child(dbref, `users/${user.uid}`));
         if (snapshot.exists()) {
@@ -178,11 +176,12 @@ const Perfil = ({ navigation }) => {
   const pickImage = async () => {
     try {
       let result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ["Images"],
         allowsEditing: true,
         aspect: [1, 1],
         quality: 1,
       });
+
       if (!result.cancelled) {
         console.log(result.assets[0].uri);
         setImage(result.assets[0].uri);
@@ -347,7 +346,9 @@ const Perfil = ({ navigation }) => {
           />
         </TouchableOpacity>
         <Text style={styles.profileName}>
-          {perfilData ? perfilData.nome : "Carregando..."}
+          {perfilData
+            ? `${perfilData.nome} ${perfilData.sobrenome}`
+            : "Carregando..."}
         </Text>
         <Text style={styles.profileInfo}>
           {perfilData ? perfilData.email : "Carregando..."}
@@ -359,57 +360,40 @@ const Perfil = ({ navigation }) => {
         {perfilData && (
           <View style={styles.profileDataList}>
             <View style={styles.profileDataItem}>
-              <Ionicons name="person" size={20} color="#6200ee" />
+              <Ionicons name="person-outline" size={20} color="#fff" />
               <Text style={styles.profileDataText}>
-                Nome: {perfilData.nome}
+                Nome: {perfilData.nome} {perfilData.sobrenome}
               </Text>
             </View>
             <View style={styles.profileDataItem}>
-              <Ionicons name="person-outline" size={20} color="#6200ee" />
-              <Text style={styles.profileDataText}>
-                Sobrenome: {perfilData.sobrenome}
-              </Text>
-            </View>
-            <View style={styles.profileDataItem}>
-              <Ionicons name="mail" size={20} color="#6200ee" />
+              <Ionicons name="mail-outline" size={20} color="#fff" />
               <Text style={styles.profileDataText}>
                 Email: {perfilData.email}
               </Text>
             </View>
             <View style={styles.profileDataItem}>
-              <Ionicons name="card" size={20} color="#6200ee" />
+              <Ionicons name="card-outline" size={20} color="#fff" />
               <Text style={styles.profileDataText}>CPF: {perfilData.cpf}</Text>
             </View>
             <View style={styles.profileDataItem}>
-              <Ionicons name="location-outline" size={20} color="#6200ee" />
+              <Ionicons name="location-outline" size={20} color="#fff" />
               <Text style={styles.profileDataText}>
-                Estado: {perfilData.estado}
+                Cidade: {perfilData.cidade} - {perfilData.estado}
               </Text>
             </View>
             <View style={styles.profileDataItem}>
-              <Ionicons name="location-sharp" size={20} color="#6200ee" />
-              <Text style={styles.profileDataText}>
-                Cidade: {perfilData.cidade}
-              </Text>
-            </View>
-            <View style={styles.profileDataItem}>
-              <Ionicons name="home" size={20} color="#6200ee" />
+              <Ionicons name="home-outline" size={20} color="#fff" />
               <Text style={styles.profileDataText}>Rua: {perfilData.rua}</Text>
             </View>
             <View style={styles.profileDataItem}>
-              <Ionicons name="mail-open" size={20} color="#6200ee" />
+              <Ionicons name="mail-open-outline" size={20} color="#fff" />
               <Text style={styles.profileDataText}>CEP: {perfilData.cep}</Text>
             </View>
             <View style={styles.profileDataItem}>
-              <Ionicons name="calendar" size={20} color="#6200ee" />
+              <Ionicons name="calendar-outline" size={20} color="#fff" />
               <Text style={styles.profileDataText}>
                 Data de Nascimento: {perfilData.dataNascimento}
               </Text>
-            </View>
-            <View style={styles.profileDataItem}>
-              <Ionicons name="location" size={20} color="#6200ee" />
-              <Text style={styles.dataLabel}>Localização:</Text>
-              <Text style={styles.dataValue}>{location}</Text>
             </View>
           </View>
         )}
@@ -417,11 +401,11 @@ const Perfil = ({ navigation }) => {
 
       <View style={styles.buttonsContainer}>
         <TouchableOpacity style={styles.button} onPress={handleDataUser}>
-          <Ionicons name="person" size={20} color="#fff" />
+          <Ionicons name="person-outline" size={20} color="#fff" />
           <Text style={styles.buttonText}>Editar Perfil</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.button} onPress={handleLogout}>
-          <Ionicons name="log-out" size={20} color="#fff" />
+          <Ionicons name="log-out-outline" size={20} color="#fff" />
           <Text style={styles.buttonText}>Sair</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.button} onPress={handleGoToMap}>
@@ -429,7 +413,7 @@ const Perfil = ({ navigation }) => {
             <ProgressBar style={{ flex: 1 }} progress={progress} color="#fff" />
           ) : (
             <>
-              <Ionicons name="map" size={20} color="#fff" />
+              <Ionicons name="map-outline" size={20} color="#fff" />
               <Text style={styles.buttonText}>Ver no Mapa</Text>
             </>
           )}
@@ -444,23 +428,19 @@ const Perfil = ({ navigation }) => {
           setModalVisible(!modalVisible);
         }}
       >
-        <View style={styles.modalContainer}>
+        <View
+          style={styles.modalContainer}
+          onTouchStart={() => setModalVisible(false)}
+        >
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Escolha uma opção:</Text>
+            <Text style={styles.modalTitle}>Escolha uma opção: </Text>
             <Pressable style={styles.modalOption} onPress={takePhoto}>
-              <Ionicons name="camera" size={24} color="#6200ee" />
+              <Ionicons name="camera-outline" size={24} color="#fff" />
               <Text style={styles.modalOptionText}>Tirar Foto</Text>
             </Pressable>
             <Pressable style={styles.modalOption} onPress={pickImage}>
-              <Ionicons name="images" size={24} color="#6200ee" />
+              <Ionicons name="images-outline" size={24} color="#fff" />
               <Text style={styles.modalOptionText}>Escolher da Galeria</Text>
-            </Pressable>
-            <Pressable
-              style={[styles.modalOption, styles.modalOptionCancel]}
-              onPress={() => setModalVisible(!modalVisible)}
-            >
-              <Ionicons name="close" size={24} color="#6200ee" />
-              <Text style={styles.modalOptionText}>Cancelar</Text>
             </Pressable>
             <Pressable
               style={[styles.modalOption, styles.modalOptionRemove]}
@@ -469,7 +449,7 @@ const Perfil = ({ navigation }) => {
                 removePhoto();
               }}
             >
-              <Ionicons name="trash" size={24} color="#fff" />
+              <Ionicons name="trash-outline" size={24} color="#fff" />
               <Text style={styles.modalOptionText}>Remover Foto</Text>
             </Pressable>
           </View>
@@ -506,14 +486,14 @@ const styles = StyleSheet.create({
   profileDataContainer: {
     width: "100%",
     padding: 20,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: "#9344fa",
     borderRadius: 10,
     marginBottom: 20,
   },
   profileLabel: {
     fontSize: 18,
     fontWeight: "bold",
-    marginBottom: 10,
+    color: "white",
   },
   profileDataList: {
     marginTop: 10,
@@ -525,7 +505,7 @@ const styles = StyleSheet.create({
   },
   profileDataText: {
     fontSize: 16,
-    color: "#333",
+    color: "white",
     marginLeft: 10,
   },
   buttonsContainer: {
@@ -536,17 +516,17 @@ const styles = StyleSheet.create({
   button: {
     backgroundColor: "#9344fa",
     width: "100%",
-    padding: 15,
+    padding: 13,
     borderRadius: 10,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 10,
+    marginBottom: 15,
+    gap: 3,
   },
   buttonText: {
     color: "#fff",
     fontSize: 16,
-    marginLeft: 10,
   },
   modalContainer: {
     flex: 1,
@@ -554,7 +534,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0, 0, 0, 0.5)", // Fundo escuro translúcido
   },
   modalContent: {
-    backgroundColor: "white",
+    backgroundColor: "#9344fa",
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 20,
@@ -566,6 +546,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     marginBottom: 15,
     textAlign: "center",
+    color: "#fff",
   },
   modalOption: {
     flexDirection: "row",
@@ -574,18 +555,13 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginBottom: 10,
     width: "100%",
-    backgroundColor: "#f5f5f5",
+    borderWidth: 1,
+    borderColor: "#fff",
   },
   modalOptionText: {
     fontSize: 16,
     marginLeft: 10,
-    color: "#333",
-  },
-  modalOptionCancel: {
-    backgroundColor: "#ccc",
-  },
-  modalOptionRemove: {
-    backgroundColor: "#ff4444",
+    color: "#fff",
   },
 });
 

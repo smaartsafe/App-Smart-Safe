@@ -6,74 +6,50 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
-  ActivityIndicator,
   ImageBackground,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
 import * as SecureStore from "expo-secure-store";
-import * as LocalAuthentication from "expo-local-authentication";
+import { Accelerometer } from "expo-sensors";
 
 const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
-
-  const togglePasswordVisibility = () => {
-    setShowPassword(!showPassword);
-  };
+  const [shakeDetected, setShakeDetected] = useState(false);
 
   const handleLogin = async () => {
-    setIsLoading(true);
-
     try {
-      const isBiometricAvailable =
-        (await LocalAuthentication.hasHardwareAsync()) &&
-        (await LocalAuthentication.isEnrolledAsync());
-      let isAuthenticated = false;
-
-      if (isBiometricAvailable) {
-        const result = await LocalAuthentication.authenticateAsync({
-          promptMessage: "Autenticação",
-        });
-        isAuthenticated = result.success;
-      } else {
-        // Se a autenticação biométrica não estiver disponível, solicite a senha do dispositivo
-        isAuthenticated = await LocalAuthentication.authenticateAsync({
-          promptMessage: "Autenticação de senha do dispositivo",
-        });
-      }
-
-      if (isAuthenticated) {
-        const auth = getAuth();
-        const login = await signInWithEmailAndPassword(auth, email, senha);
-        await SecureStore.setItemAsync("userEmail", email);
-        await SecureStore.setItemAsync("userPassword", senha);
-        navigation.navigate("MainTabs");
-      } else {
-        Alert.alert(
-          "Erro",
-          "Autenticação biométrica ou de senha do dispositivo falhou. Por favor, tente novamente."
-        );
-      }
+      const auth = getAuth();
+      await signInWithEmailAndPassword(auth, email, senha);
+      await SecureStore.setItemAsync("userEmail", email);
+      await SecureStore.setItemAsync("userPassword", senha);
+      navigation.navigate("MainTabs");
     } catch (error) {
       console.error("Erro ao fazer login:", error);
-      setErrorMessage("Email ou senha incorretos. Por favor, tente novamente.");
-    } finally {
-      setIsLoading(false);
+      Alert.alert("Erro", "Email ou senha incorretos.");
     }
   };
 
-  const clearCredentials = async () => {
-    try {
-      await SecureStore.deleteItemAsync("userEmail");
-      await SecureStore.deleteItemAsync("userPassword");
-    } catch (error) {
-      console.error("Erro ao limpar credenciais:", error);
+  useEffect(() => {
+    Accelerometer.setUpdateInterval(200); // Atualizar a cada 200ms
+    const subscription = Accelerometer.addListener(({ x, y, z }) => {
+      const totalForce = Math.sqrt(x * x + y * y + z * z);
+      if (totalForce > 1.5) { // Sensibilidade ao movimento
+        setShakeDetected(true);
+      }
+    });
+
+    // Limpar o listener quando o componente for desmontado
+    return () => subscription.remove();
+  }, []);
+
+  useEffect(() => {
+    if (shakeDetected) {
+      handleLogin(); // Realizar login automaticamente
+      setShakeDetected(false); // Resetar o estado do shake
     }
-  };
+  }, [shakeDetected]);
 
   useEffect(() => {
     const loadCredentials = async () => {
@@ -86,7 +62,6 @@ const LoginScreen = ({ navigation }) => {
         }
       } catch (error) {
         console.error("Erro ao carregar credenciais:", error);
-        clearCredentials();
       }
     };
 
@@ -99,68 +74,34 @@ const LoginScreen = ({ navigation }) => {
       style={styles.background}
     >
       <View style={styles.container}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Ionicons name="arrow-back" size={24} color="black" />
-          <Text style={styles.backText}>Voltar</Text>
-        </TouchableOpacity>
-
         <Text style={styles.title}>Login</Text>
         <View style={styles.inputGroup}>
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Email:</Text>
-            <TextInput
-              style={styles.input}
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-          </View>
+          <Text style={styles.label}>Email:</Text>
+          <TextInput
+            style={styles.input}
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            placeholderTextColor="white"
+            placeholder="Digite seu email"
+          />
         </View>
         <View style={styles.inputGroup}>
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Senha:</Text>
-            <View style={styles.passwordContainer}>
-              <TextInput
-                style={styles.input}
-                value={senha}
-                onChangeText={setSenha}
-                secureTextEntry={!showPassword}
-                placeholderTextColor="white"
-              />
-              <TouchableOpacity
-                onPress={togglePasswordVisibility}
-                style={styles.icon}
-              >
-                <Ionicons
-                  name={showPassword ? "eye-off" : "eye"}
-                  size={24}
-                  color="white"
-                />
-              </TouchableOpacity>
-            </View>
-          </View>
+          <Text style={styles.label}>Senha:</Text>
+          <TextInput
+            style={styles.input}
+            value={senha}
+            onChangeText={setSenha}
+            secureTextEntry={true}
+            placeholderTextColor="white"
+            placeholder="Digite sua senha"
+          />
         </View>
-
-        <TouchableOpacity
-          onPress={() => navigation.navigate("ResetPassword")}
-          style={styles.forgotPassword}
-        >
-          <Text style={styles.forgotPasswordText}>Esqueceu a senha?</Text>
-        </TouchableOpacity>
-
-        <Text style={styles.errorText}>{errorMessage}</Text>
-
         <TouchableOpacity style={styles.button} onPress={handleLogin}>
           <View style={styles.buttonContent}>
-            {isLoading ? (
-              <ActivityIndicator size="small" color="black" />
-            ) : (
-              <Text style={styles.buttonText}>Entrar</Text>
-            )}
+            <Ionicons name="log-in" size={24} color="black" />
+            <Text style={styles.buttonText}>Entrar</Text>
           </View>
         </TouchableOpacity>
       </View>
@@ -180,16 +121,14 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   title: {
-    fontSize: 24,
+    fontSize: 28,
     marginBottom: 20,
     color: "white",
+    fontWeight: "bold",
   },
   inputGroup: {
-    marginBottom: 5,
+    marginBottom: 20,
     width: "80%",
-  },
-  formGroup: {
-    marginBottom: 10,
   },
   label: {
     marginBottom: 5,
@@ -202,34 +141,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "gray",
     borderRadius: 5,
-    marginBottom: 5,
     paddingHorizontal: 10,
-    color: "white",
-  },
-  backButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    position: "absolute",
-    top: 40,
-    left: 20,
-  },
-  backText: {
-    fontSize: 16,
-    marginLeft: 5,
-  },
-  icon: {
-    right: 10,
-    top: 8,
-    position: "absolute",
-  },
-  forgotPassword: {
-    marginBottom: 20,
-    alignSelf: "flex-end",
-    right: 40,
-  },
-  forgotPasswordText: {
-    fontWeight: "bold",
-    textDecorationLine: "underline",
     color: "white",
   },
   button: {
@@ -238,14 +150,14 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     borderRadius: 5,
   },
+  buttonContent: {
+    flexDirection: "row",
+    gap: 3,
+  },
   buttonText: {
     color: "black",
     fontSize: 18,
     fontWeight: "bold",
-  },
-  errorText: {
-    color: "red",
-    marginBottom: 5,
   },
 });
 

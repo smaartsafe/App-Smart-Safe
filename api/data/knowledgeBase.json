@@ -1,0 +1,15 @@
+[
+    {
+      "question": "O que é React Native?",
+      "answer": "React Native é uma biblioteca para desenvolvimento mobile."
+    },
+    {
+      "question": "Como usar o Expo?",
+      "answer": "Expo é uma ferramenta para criar e testar aplicativos React Native."
+    },
+    {
+      "question": "Como criar um app?",
+      "answer": "Você pode começar criando um projeto Expo com `expo init`."
+    }
+  ]
+  

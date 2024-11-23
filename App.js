@@ -9,11 +9,13 @@ import LoginScreen from "./screens/login/LoginScreen";
 import Inicio from "./screens/inicio/Inicio";
 import AdicionarContatoScreen from "./screens/adicionar/AdicionarContatoScreen";
 import PerfilScreen from "./screens/perfil/PerfilScreen";
+import ChatScreen from "./screens/chat/ChatScreen";
 import SegundaParte from "./screens/cadastro/SegundaParte";
 import ResetPasswordScreen from "./screens/ResetPasswordScreen/ResetPassword";
 import DadosdoUsuario from "./screens/dadosdoUsuario/Dados";
 import MapScreen from "./screens/mapa/mapaScreen";
 import Cadastro from "./screens/cadastro/CadastroScreen";
+
 import Audio from "./screens/audio/Audio";
 import Emergencia from "./screens/ContatosdeEmergencia/ContatosEmergencia";
 import { getAuth } from "firebase/auth";
@@ -62,14 +64,18 @@ const MainTabs = ({ navigation }) => {
       screenOptions={{
         drawerStyle: {
           backgroundColor: "#3c0c7b",
-          width: 210,
+          width: 250,
         },
         drawerActiveTintColor: "#9344fa",
         drawerInactiveTintColor: "#fff",
-        itemStyle: { marginVertical: 5 },
-        drawerLabelStyle: { fontSize: 18, paddingVertical: 3 },
+        itemStyle: { marginVertical: 5 }, // Para margens verticais
+        drawerLabelStyle: {
+          fontSize: 18, 
+          paddingVertical: 1,
+          marginLeft: -20, // Esse valor também pode ser ajustado se necessário
+        },
         headerStyle: {
-          height: 90,
+          height: 95,
           backgroundColor: "#9344fa",
         },
         headerTintColor: "#fff",
@@ -102,7 +108,7 @@ const MainTabs = ({ navigation }) => {
         options={{
           headerTitle: "",
           drawerIcon: ({ color, size }) => (
-            <Icon name="home" size={size} color={color} />
+            <Icon name="home" size={20} color={color} />
           ),
         }}
       />
@@ -112,7 +118,7 @@ const MainTabs = ({ navigation }) => {
         options={{
           headerTitle: "",
           drawerIcon: ({ color, size }) => (
-            <Icon name="plus" size={size} color={color} />
+            <Icon name="plus" size={20} color={color} />
           ),
         }}
       />
@@ -122,7 +128,7 @@ const MainTabs = ({ navigation }) => {
         options={{
           headerTitle: "",
           drawerIcon: ({ color, size }) => (
-            <Icon name="phone" size={size} color={color} />
+            <Icon name="phone" size={20} color={color} />
           ),
         }}
       />
@@ -132,14 +138,23 @@ const MainTabs = ({ navigation }) => {
         options={{
           headerTitle: "",
           drawerIcon: ({ color, size }) => (
-            <Icon name="music" size={size} color={color} />
+            <Icon name="music" size={20} color={color} />
+          ),
+        }}
+      />
+      <Drawer.Screen
+        name="Chat Bot"
+        component={ChatScreen}
+        options={{
+          headerTitle: "",
+          drawerIcon: ({ color, size }) => (
+            <Icon name="user" size={20} color={color} />
           ),
         }}
       />
     </Drawer.Navigator>
   );
-};
-
+};  
 const App = () => {
   return (
     <NavigationContainer>

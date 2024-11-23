@@ -16,6 +16,7 @@ import * as SecureStore from "expo-secure-store";
 import { useFonts } from "expo-font";
 import * as LocalAuthentication from "expo-local-authentication";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import Ionicons from '@expo/vector-icons/Ionicons';
 
 const CheckBox = ({ checked, onChange }) => (
   <TouchableOpacity style={styles.checkbox} onPress={onChange}>
@@ -26,7 +27,7 @@ const CheckBox = ({ checked, onChange }) => (
 const LoginCadastroScreen = () => {
   const navigation = useNavigation();
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const [isChecked, setIsChecked] = useState(false);
+  const [isChecked, setIsChecked] = useState(true);
   const [error, setError] = useState("");
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [hideWelcomeModal, setHideWelcomeModal] = useState(false);
@@ -142,10 +143,16 @@ const LoginCadastroScreen = () => {
             style={styles.buttonCadastro}
             onPress={handleCadastrar}
           >
-            <Text style={styles.buttonTextCadastro}>Cadastra-se</Text>
+            <View style={styles.buttonContent}>
+              <Ionicons name="person-add" size={24} color="#3c0c7b" />
+              <Text style={styles.buttonTextCadastro}>Cadastra-se</Text>
+            </View>
           </TouchableOpacity>
           <TouchableOpacity style={styles.buttonLogin} onPress={handleEntrar}>
-            <Text style={styles.buttonTextLogin}>Entrar</Text>
+            <View style={styles.buttonContent}>
+              <Ionicons name="log-in" size={24} color="white" />
+              <Text style={styles.buttonTextLogin}>Fazer Login</Text>
+            </View>
           </TouchableOpacity>
         </View>
 
@@ -154,19 +161,19 @@ const LoginCadastroScreen = () => {
             checked={isChecked}
             onChange={() => {
               setIsChecked(!isChecked);
-              setError(""); // Limpa o erro quando o usuário marca ou desmarca o checkbox
+              setError("");
             }}
           />
-          <TouchableOpacity onPress={handleTermsAndConditions}>
+          <TouchableOpacity style={styles.termsButton} onPress={handleTermsAndConditions}>
             <Text style={styles.termsText}>
               Li e aceito os Termos e Condições
             </Text>
+            <Ionicons name="document" size={16} color="white" />
           </TouchableOpacity>
         </View>
       </Animated.View>
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-      {/* Modal de boas-vindas */}
       <Modal
         animationType="slide"
         transparent={true}
@@ -246,6 +253,12 @@ const styles = StyleSheet.create({
     fontSize: 22,
     color: "#3c0c7b",
   },
+  buttonContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 3,
+  },
   buttonTextLogin: {
     textAlign: "center",
     fontSize: 20,
@@ -279,6 +292,11 @@ const styles = StyleSheet.create({
   },
   checked: {
     opacity: 1,
+  },
+  termsButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
   },
   termsText: {
     color: "white",
@@ -333,3 +351,5 @@ const styles = StyleSheet.create({
 });
 
 export default LoginCadastroScreen;
+
+

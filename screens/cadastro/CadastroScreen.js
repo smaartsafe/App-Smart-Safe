@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -18,6 +18,15 @@ const CadastroStepOne = ({ navigation }) => {
   const [dataNascimento, setDataNascimento] = useState("");
   const [cpfValido, setCpfValido] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
+
+  useEffect(() => {
+    if (errorMessage) {
+      const timer = setTimeout(() => {
+        setErrorMessage("");
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [errorMessage]);
 
   const handleNext = () => {
     const allFieldsFilled =
@@ -147,6 +156,7 @@ const CadastroStepOne = ({ navigation }) => {
             style={styles.input}
             value={nome}
             onChangeText={setNome}
+            placeholder="Digite seu nome"
             placeholderTextColor="white"
           />
         </View>
@@ -156,6 +166,7 @@ const CadastroStepOne = ({ navigation }) => {
             style={styles.input}
             value={sobrenome}
             onChangeText={setSobrenome}
+            placeholder="Digite seu sobrenome"
             placeholderTextColor="white"
           />
         </View>
@@ -204,7 +215,8 @@ const CadastroStepOne = ({ navigation }) => {
           onPress={handleNext}
           disabled={!cpfValido}
         >
-          <Text style={styles.buttonText}>PRÓXIMO</Text>
+          <Ionicons name="chevron-forward" size={24} color="black" />
+          <Text style={styles.buttonText}>Próximo</Text>
         </TouchableOpacity>
       </ScrollView>
     </ImageBackground>
@@ -237,10 +249,12 @@ const styles = StyleSheet.create({
   },
   button: {
     backgroundColor: "white",
-    paddingHorizontal: 25,
+    paddingHorizontal: 20,
     borderRadius: 5,
     marginTop: 25,
-    paddingVertical: 10,
+    paddingVertical: 8,
+    flexDirection: "row",
+    alignItems: "center", 
   },
   buttonText: {
     color: "black",
@@ -269,3 +283,4 @@ const styles = StyleSheet.create({
 });
 
 export default CadastroStepOne;
+

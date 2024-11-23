@@ -6,10 +6,16 @@
     "orientation": "portrait",
     "icon": "./src/assets/Logo-Atual.png",
     "userInterfaceStyle": "light",
+    "newArchEnabled": true,
     "splash": {
       "image": "./src/assets/FundoSplashOriginal.png",
       "resizeMode": "cover",
       "backgroundColor": "#ffffff"
+    },
+    "doctor": {
+      "reactNativeDirectoryCheck": {
+        "exclude": ["react-redux"]
+      }
     },
     "assetBundlePatterns": [
       "**/*"

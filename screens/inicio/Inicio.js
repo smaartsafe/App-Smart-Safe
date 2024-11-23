@@ -9,6 +9,7 @@ import {
   Linking,
 } from "react-native";
 import { FontAwesome } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { Audio } from "expo-av";
 import {
   getStorage,
@@ -91,7 +92,6 @@ const Inicio = () => {
   async function startRecording() {
     try {
       if (permissionResponse.status !== "granted") {
-        console.log("Requesting permission..");
         await requestPermission();
       }
       await Audio.setAudioModeAsync({
@@ -99,12 +99,10 @@ const Inicio = () => {
         playsInSilentModeIOS: true,
       });
 
-      console.log("Starting recording..");
       const { recording } = await Audio.Recording.createAsync(
         Audio.RecordingOptionsPresets.HIGH_QUALITY
       );
       setRecording(recording);
-      console.log("Recording started");
 
       const auth = getAuth();
       const user = auth.currentUser;
@@ -129,12 +127,10 @@ const Inicio = () => {
   }
 
   async function stopRecording() {
-    console.log("Stopping recording..");
     setRecording(undefined);
     await recording.stopAndUnloadAsync();
     await Audio.setAudioModeAsync({ allowsRecordingIOS: false });
     const uri = recording.getURI();
-    console.log("Recording stopped and stored at", uri);
     setUploading(true);
     await uploadRecording(uri);
   }
@@ -167,7 +163,7 @@ const Inicio = () => {
         (error) => {
           console.error("Error uploading recording:", error);
           setUploading(false);
-        },
+        },  
         () => {
           getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
             console.log("Recording uploaded successfully at", downloadURL);
@@ -285,7 +281,7 @@ const Inicio = () => {
         style={[styles.sosButton, recording && styles.sosButtonRecording]}
         onPress={recording ? stopRecording : startRecording}
       >
-        <FontAwesome name="exclamation-triangle" size={60} color="white" />
+        <Ionicons name="alert-circle" size={60} color="white" />
         <Text style={styles.titleSOS}>SOS</Text>
       </TouchableOpacity>
       {uploading && (
@@ -304,7 +300,7 @@ const Inicio = () => {
         style={styles.emergencyButton}
         onPress={handleEmergencyCall}
       >
-        <FontAwesome name="phone" size={27} color="white" />
+        <Ionicons name="call" size={27} color="white" />
         <Text style={styles.emergencyText}>
           Acionar contato de emergência pessoal
         </Text>
@@ -329,7 +325,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     position: "relative",
-    gap: 5,
   },
   sosButtonRecording: {
     backgroundColor: "darkred",

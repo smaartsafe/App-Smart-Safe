@@ -256,6 +256,8 @@ const SegundaParte = () => {
                 value={bairro}
                 onChangeText={setBairro}
                 editable={true}
+                placeholder="Digite o bairro"
+                placeholderTextColor={'#fff'}
               />
             </View>
           </View>
@@ -326,7 +328,10 @@ const SegundaParte = () => {
           {isLoading ? (
             <ActivityIndicator size="small" color="white" />
           ) : (
-            <Text style={styles.buttonText}>Finalizar Cadastro</Text>
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <Ionicons name="checkmark" size={24} color="black" />
+              <Text style={styles.buttonText}>Finalizar Cadastro</Text>
+            </View>
           )}
         </TouchableOpacity>
 
@@ -436,3 +441,4 @@ const styles = StyleSheet.create({
 });
 
 export default SegundaParte;
+
