@@ -9,8 +9,9 @@ import {
   Modal,
   SafeAreaView,
   Linking,
+  StatusBar,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import * as Contacts from "expo-contacts";
 import { getDatabase, ref, set, get, remove } from "firebase/database";
 import { getAuth } from "firebase/auth";
@@ -30,16 +31,12 @@ const AdicionarContatoScreen = () => {
   const formatPhoneNumber = (phoneNumber) => {
     if (!phoneNumber) return "";
 
-    // Remove caracteres não numéricos
     let cleaned = phoneNumber.replace(/\D/g, "");
 
-    // Verifica se o número possui 11 dígitos (indicando o nono dígito)
     if (cleaned.length === 11) {
-      // Remove o nono dígito
       cleaned = cleaned.substring(0, 2) + cleaned.substring(3);
     }
 
-    // Adiciona o código do país se não estiver presente
     if (!cleaned.startsWith("55")) {
       cleaned = "55" + cleaned;
     }
@@ -222,22 +219,27 @@ const AdicionarContatoScreen = () => {
     }
 
     return (
-      <TouchableOpacity onPress={() => handleAddSelectedContact(item)}>
-        <View style={styles.contactItem}>
-          <Text style={styles.contactName}>{item.name}</Text>
-          <Text style={styles.contactNumber}>{phoneNumber}</Text>
+      <TouchableOpacity 
+        onPress={() => handleAddSelectedContact(item)}
+        style={styles.modalContactItem}
+      >
+        <View style={styles.avatarContainer}>
+          <Text style={styles.avatarText}>
+            {item.name.charAt(0).toUpperCase()}
+          </Text>
+        </View>
+        <View style={styles.contactInfo}>
+          <Text style={styles.modalContactName}>{item.name}</Text>
+          <Text style={styles.modalContactNumber}>{phoneNumber}</Text>
         </View>
       </TouchableOpacity>
     );
   };
 
   const toggleFavorite = (contactIndex) => {
-    const contact = addedContacts[contactIndex];
-    const updatedContact = { ...contact, favorited: !contact.favorited };
-
-    const updatedContacts = addedContacts.map((c, index) => ({
-      ...c,
-      favorited: index === contactIndex ? !c.favorited : false,
+    const updatedContacts = addedContacts.map((contact, index) => ({
+      ...contact,
+      favorited: index === contactIndex ? !contact.favorited : contact.favorited,
     }));
 
     setAddedContacts(updatedContacts);
@@ -245,85 +247,108 @@ const AdicionarContatoScreen = () => {
   };
 
   const renderAddedContactItem = ({ item, index }) => {
-    const phoneNumber = item.phoneNumber;
-
     return (
-      <View style={styles.contactContainer}>
+      <Animated.View style={styles.contactContainer}>
         <View style={styles.contactItem}>
-          <Text style={styles.contactName}>{item.name.substring(0, 14)}</Text>
-          <Text style={styles.contactNumber}>{phoneNumber}</Text>
+          <View style={styles.contactMainInfo}>
+            <View style={[styles.avatarContainer, { backgroundColor: getRandomColor(item.name) }]}>
+              <Text style={styles.avatarText}>
+                {item.name.charAt(0).toUpperCase()}
+              </Text>
+            </View>
+            <View style={styles.textContainer}>
+              <Text style={styles.contactName}>{item.name}</Text>
+              <Text style={styles.contactNumber}>{item.phoneNumber}</Text>
+            </View>
+          </View>
+          
           <View style={styles.contactActions}>
-            <Ionicons
-              name={item.favorited ? "star" : "star-outline"}
-              size={24}
-              color={item.favorited ? "#FFD700" : "#ccc"}
-              onPress={() => toggleFavorite(index)}
-            />
-            {phoneNumber ? (
-              <>
-                <TouchableOpacity
-                  onPress={() => handleCallContact(phoneNumber)}
-                >
-                  <Ionicons
-                    name="call"
-                    size={24}
-                    color="#008080"
-                    style={styles.actionIcon}
-                  />
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => handleSendSMS(phoneNumber)}>
-                  <Ionicons
-                    name="chatbubble"
-                    size={24}
-                    color="#008080"
-                    style={styles.actionIcon}
-                  />
-                </TouchableOpacity>
-              </>
-            ) : null}
-            <TouchableOpacity onPress={() => handleDeleteContact(index)}>
+            <TouchableOpacity 
+              onPress={() => toggleFavorite(index)} 
+              style={[styles.actionButton, styles.favoriteButton]}
+            >
               <Ionicons
-                name="trash-bin"
-                size={24}
-                color="#ff0000"
-                style={styles.actionIcon}
+                name={item.favorited ? "heart" : "heart-outline"}
+                size={22}
+                color={item.favorited ? "#FF4B6E" : "#666"}
               />
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              onPress={() => handleCallContact(item.phoneNumber)}
+              style={[styles.actionButton, styles.callButton]}
+            >
+              <Ionicons name="call" size={22} color="#fff" />
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              onPress={() => handleSendSMS(item.phoneNumber)}
+              style={[styles.actionButton, styles.messageButton]}
+            >
+              <Ionicons name="chatbubble" size={22} color="#fff" />
             </TouchableOpacity>
           </View>
         </View>
-      </View>
+      </Animated.View>
     );
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.addedContactsContainer}>
-        <Text style={styles.title}>Contatos Adicionados</Text>
-        <FlatList
-          data={addedContacts}
-          renderItem={renderAddedContactItem}
-          keyExtractor={(item, index) => index.toString()}
-        />
+      <StatusBar backgroundColor="#1A1A2E" barStyle="light-content" />
+      
+      <View style={styles.header}>
+        <View style={styles.headerContent}>
+          <Text style={styles.headerTitle}>Contatos</Text>
+          <Text style={styles.headerSubtitle}>
+            {addedContacts.length} contatos
+          </Text>
+        </View>
+        <TouchableOpacity
+          style={styles.addButton}
+          onPress={() => setShowContactListModal(true)}
+        >
+          <Ionicons name="add" size={24} color="#fff" />
+        </TouchableOpacity>
       </View>
 
-      <TouchableOpacity
-        style={styles.addContactButton}
-        onPress={() => setShowContactListModal(true)}
-      >
-        <Text style={styles.addContactButtonText}>Adicionar Contato</Text>
-      </TouchableOpacity>
-
+      <View style={styles.searchContainer}>
+        <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Buscar contatos..."
+          placeholderTextColor="#666"
+          value={searchTerm}
+          onChangeText={handleSearch}
+        />
+      </View>
+  
+      <View style={styles.addedContactsContainer}>
+        {addedContacts.length === 0 ? (
+          <View style={styles.emptyState}>
+            <View style={styles.emptyStateIconContainer}>
+              <Ionicons name="people" size={64} color="#fff" />
+            </View>
+            <Text style={styles.emptyStateText}>Sua lista está vazia</Text>
+            <Text style={styles.emptyStateSubText}>
+              Adicione seus contatos favoritos
+            </Text>
+          </View>
+        ) : (
+          <FlatList
+            data={addedContacts}
+            renderItem={renderAddedContactItem}
+            keyExtractor={(item, index) => index.toString()}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.contactsList}
+          />
+        )}
+      </View>
+  
       <Modal visible={showContactListModal} animationType="slide">
         <SafeAreaView style={styles.modalContainer}>
-          <View style={styles.searchContainer}>
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Pesquisar contatos"
-              placeholderTextColor={"white"}
-              color={"white"}
-              value={searchTerm}
-              onChangeText={handleSearch}
-            />
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Novo Contato</Text>
             <TouchableOpacity
               style={styles.closeButton}
               onPress={() => {
@@ -331,27 +356,31 @@ const AdicionarContatoScreen = () => {
                 setShowContactListModal(false);
               }}
             >
-              <Ionicons name="close" size={24} color="#fff" />
+              <View style={styles.closeButtonInner}>
+                <Ionicons name="close" size={24} color="#fff" />
+              </View>
             </TouchableOpacity>
           </View>
+
+          <View style={styles.modalSearchContainer}>
+            <Ionicons name="search" size={20} color="#666" style={styles.modalSearchIcon} />
+            <TextInput
+              style={styles.modalSearchInput}
+              placeholder="Buscar contatos..."
+              placeholderTextColor="#666"
+              value={searchTerm}
+              onChangeText={handleSearch}
+            />
+          </View>
+  
           <FlatList
             data={selectedContacts}
             renderItem={renderContactItem}
             keyExtractor={(item, index) => index.toString()}
+            contentContainerStyle={styles.modalList}
+            showsVerticalScrollIndicator={false}
           />
         </SafeAreaView>
-      </Modal>
-
-      <Modal visible={showConfirmationModal} animationType="slide">
-        <View style={styles.confirmationModal}>
-          <Text style={styles.confirmationText}>{confirmationMessage}</Text>
-          <TouchableOpacity
-            style={styles.confirmationButton}
-            onPress={() => setShowConfirmationModal(false)}
-          >
-            <Text style={styles.confirmationButtonText}>Fechar</Text>
-          </TouchableOpacity>
-        </View>
       </Modal>
     </SafeAreaView>
   );
@@ -361,108 +390,194 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#3c0c7b",
-    padding: 16,
   },
-  title: {
-    fontSize: 20,
-    fontWeight: "bold",
-    marginBottom: 10,
-    color: "white",
-    marginBottom: 20,
-  },
-  addedContactsContainer: {
-    flex: 1,
-    backgroundColor: "#3c0c7b",
-  },
-  addContactButton: {
-    backgroundColor: "#9344fa",
-    paddingVertical: 12,
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: 20,
-    borderRadius: 8,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 20,
+    paddingVertical: 16,
+    backgroundColor: '#3c0c7b',
   },
-  addContactButtonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  contactContainer: {
-    marginBottom: 10,
-  },
-  contactItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: "#F5F5F5",
-    paddingVertical: 10,
-    paddingHorizontal: 15,
-    borderRadius: 8,
-    marginBottom: 15,
-  },
-  contactName: {
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  contactNumber: {
-    fontSize: 14,
-    color: "#888888",
-  },
-  contactActions: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  actionIcon: {
-    marginLeft: 15,
-  },
-  modalContainer: {
+  headerContent: {
     flex: 1,
-    padding: 16,
-    backgroundColor: "#3c0c7b",
+  },
+  headerTitle: {
+    fontSize: 32,
+    fontWeight: "700",
+    color: "white",
+    letterSpacing: 0.5,
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: "#fff",
+    marginTop: 4,
+  },
+  addButton: {
+    width: 50,
+    height: 50,
+    backgroundColor: '#9344fa',
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 8,
+    shadowColor: '#4B50FF',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
   },
   searchContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#252542',
+    marginHorizontal: 20,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    marginBottom: 20,
+  },
+  searchIcon: {
+    marginRight: 12,
   },
   searchInput: {
     flex: 1,
-    borderColor: "#CCCCCC",
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: 10,
-    marginRight: 10,
+    height: 50,
+    color: '#fff',
+    fontSize: 16,
+  },
+  addedContactsContainer: {
+    flex: 1,
+    paddingHorizontal: 20,
+  },
+  contactContainer: {
+    marginBottom: 16,
+    borderRadius: 16,
+    backgroundColor: "#252542",
+  },
+  contactItem: {
+    padding: 16,
+  },
+  contactMainInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  avatarContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  avatarText: {
+    fontSize: 24,
+    color: '#fff',
+    fontWeight: '600',
+  },
+  textContainer: {
+    flex: 1,
+  },
+  contactName: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: '#fff',
+    marginBottom: 4,
+  },
+  contactNumber: {
+    fontSize: 14,
+    color: "#666",
+  },
+  contactActions: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 12,
+  },
+  actionButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  favoriteButton: {
+    backgroundColor: '#2A2A42',
+  },
+  callButton: {
+    backgroundColor: '#4CAF50',
+  },
+  messageButton: {
+    backgroundColor: '#4B50FF',
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyStateIconContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: '#252542',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  emptyStateText: {
+    fontSize: 24,
+    color: 'white',
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  emptyStateSubText: {
+    fontSize: 16,
+    color: '#666',
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: "#1A1A2E",
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#252542',
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: "600",
+    color: '#fff',
   },
   closeButton: {
-    padding: 10,
+    marginLeft: 16,
   },
-  confirmationModal: {
+  closeButtonInner: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#252542',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalSearchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#252542',
+    margin: 20,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+  },
+  modalSearchInput: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(0,0,0,0.5)",
-  },
-  confirmationText: {
-    fontSize: 18,
-    color: "#FFFFFF",
-    marginBottom: 20,
-    textAlign: "center",
-    paddingHorizontal: 20,
-  },
-  confirmationButton: {
-    backgroundColor: "#4CAF50",
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  confirmationButtonText: {
-    color: "#FFFFFF",
+    height: 50,
+    color: '#fff',
     fontSize: 16,
-    fontWeight: "bold",
+  },
+  modalList: {
+    paddingHorizontal: 20,
   },
 });
 
 export default AdicionarContatoScreen;
+  

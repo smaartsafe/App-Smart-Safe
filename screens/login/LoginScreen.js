@@ -11,20 +11,40 @@ import {
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
 import * as SecureStore from "expo-secure-store";
-import { Accelerometer } from "expo-sensors";
+import * as LocalAuthentication from "expo-local-authentication";
 
 const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
-  const [shakeDetected, setShakeDetected] = useState(false);
+  const [isBiometricSupported, setIsBiometricSupported] = useState(false);
 
   const handleLogin = async () => {
     try {
-      const auth = getAuth();
-      await signInWithEmailAndPassword(auth, email, senha);
-      await SecureStore.setItemAsync("userEmail", email);
-      await SecureStore.setItemAsync("userPassword", senha);
-      navigation.navigate("MainTabs");
+      // Verifica se a biometria é suportada
+      const isBiometricAvailable = await LocalAuthentication.hasHardwareAsync();
+      if (isBiometricAvailable) {
+        const { success } = await LocalAuthentication.authenticateAsync({
+          promptMessage: "Autentique-se para continuar",
+          fallbackLabel: "Usar senha",
+        });
+
+        if (success) {
+          const auth = getAuth();
+          await signInWithEmailAndPassword(auth, email, senha);
+          await SecureStore.setItemAsync("userEmail", email);
+          await SecureStore.setItemAsync("userPassword", senha);
+          navigation.navigate("MainTabs");
+        } else {
+          Alert.alert("Erro", "Falha na autenticação biométrica");
+        }
+      } else {
+        // Se biometria não estiver disponível, realiza o login com email e senha
+        const auth = getAuth();
+        await signInWithEmailAndPassword(auth, email, senha);
+        await SecureStore.setItemAsync("userEmail", email);
+        await SecureStore.setItemAsync("userPassword", senha);
+        navigation.navigate("MainTabs");
+      }
     } catch (error) {
       console.error("Erro ao fazer login:", error);
       Alert.alert("Erro", "Email ou senha incorretos.");
@@ -32,26 +52,16 @@ const LoginScreen = ({ navigation }) => {
   };
 
   useEffect(() => {
-    Accelerometer.setUpdateInterval(200); // Atualizar a cada 200ms
-    const subscription = Accelerometer.addListener(({ x, y, z }) => {
-      const totalForce = Math.sqrt(x * x + y * y + z * z);
-      if (totalForce > 1.5) { // Sensibilidade ao movimento
-        setShakeDetected(true);
-      }
-    });
-
-    // Limpar o listener quando o componente for desmontado
-    return () => subscription.remove();
+    // Verificar se o dispositivo suporta biometria
+    const checkBiometricSupport = async () => {
+      const compatible = await LocalAuthentication.hasHardwareAsync();
+      setIsBiometricSupported(compatible);
+    };
+    checkBiometricSupport();
   }, []);
 
   useEffect(() => {
-    if (shakeDetected) {
-      handleLogin(); // Realizar login automaticamente
-      setShakeDetected(false); // Resetar o estado do shake
-    }
-  }, [shakeDetected]);
-
-  useEffect(() => {
+    // Carregar as credenciais salvas (se houver) quando o componente for montado
     const loadCredentials = async () => {
       try {
         const savedEmail = await SecureStore.getItemAsync("userEmail");
@@ -149,6 +159,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 25,
     paddingVertical: 7,
     borderRadius: 5,
+    marginBottom: 10,
   },
   buttonContent: {
     flexDirection: "row",

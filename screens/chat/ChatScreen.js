@@ -1,17 +1,11 @@
 import React, { useState, useRef } from 'react';
 import { View, Text, TextInput, FlatList, KeyboardAvoidingView, Platform, StyleSheet, Pressable, ActivityIndicator, Animated, Image } from 'react-native';
 import { TypingAnimation } from 'react-native-typing-animation';
-import api from '../../src/services/http';
+import api from '../../src/services/http';  // API do seu back-end
 import Ionicons from '@expo/vector-icons/Ionicons';
-const ChatScreen = () => {
-  // Mensagem inicial do bot
-  const initialMessage = {
-    id: Date.now(),
-    text: "Olá! Sou seu assistente virtual. Como posso ajudar você hoje?",
-    sender: 'bot'
-  };
 
-  const [messages, setMessages] = useState([initialMessage]); // Inicializando com a mensagem
+const ChatScreen = () => {
+  const [messages, setMessages] = useState([]);  // Inicia com um array vazio
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const flatListRef = useRef(null);
@@ -77,7 +71,6 @@ const ChatScreen = () => {
     }
   };
 
-  // Resto do código permanece igual...
   const renderMessage = ({ item }) => (
     <View style={[
       styles.messageRow,
@@ -191,10 +184,9 @@ const ChatScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  // Estilos permanecem os mesmos...
   container: { 
     flex: 1, 
-    backgroundColor: '#f5f5f5' 
+    backgroundColor: '#3c0c7b' 
   },
   messagesList: { 
     paddingVertical: 15
@@ -221,14 +213,8 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 16,
   },
-  sendButtonTextContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-    gap: 3,
-  },
   userMessage: { 
-    backgroundColor: '#007AFF',
+    backgroundColor: '#9344fa',
     borderBottomRightRadius: 4,
   },
   botMessage: { 
@@ -254,7 +240,13 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 4,
     padding: 12,
     alignSelf: 'flex-start',
-    flexDirection: 'row',
+    minWidth: 60, // Garante uma largura mínima para o bubble
+    minHeight: 40, // Garante uma altura mínima para o bubble
+  },
+  typingAnimationContainer: {
+    width: 40, // Largura fixa para o container da animação
+    height: 10, // Altura fixa para o container da animação
+    justifyContent: 'center',
     alignItems: 'center',
   },
   typingAnimation: {
@@ -263,10 +255,9 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     padding: 16,
-    backgroundColor: '#fff',
+    backgroundColor: '#9344fa',
     alignItems: 'flex-end',
-    borderTopWidth: 1,
-    borderTopColor: '#E9ECEF',
+    alignItems: 'center',
   },
   input: {
     flex: 1,
@@ -279,7 +270,7 @@ const styles = StyleSheet.create({
     maxHeight: 100,
   },
   sendButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#3c0c7b',
     borderRadius: 20,
     padding: 12,
     alignItems: 'center',

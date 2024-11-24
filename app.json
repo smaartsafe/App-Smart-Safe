@@ -1,67 +1,62 @@
 {
   "expo": {
-    "name": "Smart Safe",
-    "slug": "smart-safe",
-    "version": "1.1.3",
-    "orientation": "portrait",
-    "icon": "./src/assets/Logo-Atual.png",
-    "userInterfaceStyle": "light",
-    "newArchEnabled": true,
-    "splash": {
-      "image": "./src/assets/FundoSplashOriginal.png",
-      "resizeMode": "cover",
-      "backgroundColor": "#ffffff"
-    },
-    "doctor": {
-      "reactNativeDirectoryCheck": {
-        "exclude": ["react-redux"]
-      }
-    },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
-    "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.yourcompany.yourappname",
-      "infoPlist": {
-        "UIFileSharingEnabled": true,
-        "NSPhotoLibraryUsageDescription": "Permite o acesso à biblioteca de fotos para selecionar imagens.",
-        "NSCameraUsageDescription": "Permite o acesso à câmera para tirar fotos.",
-        "NSMicrophoneUsageDescription": "Permite o acesso ao microfone para gravar áudio."
-      }
-    },
-    "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./src/assets/foregroundImage.png",
-        "backgroundColor": "#45227d"
-      },
-      "package": "com.yourcompany.yourappname",
-      "config": {
-        "googleMaps": {
-          "apiKey": "AIzaSyDvHfMvLMgqaQADb5TyDpbdNuiNjDuKpm0"
-        }
-      }
-    },
-    "web": {
-      "favicon": "./src/assets/Logo-Atual.png"
-    },
-    "plugins": [
-      [
-        "expo-secure-store",
-        {
-          "faceIDPermission": "Allow $(PRODUCT_NAME) to access your Face ID biometric data."
-        }
-      ],
-      "expo-font"
-    ],
-    "extra": {
-      "eas": {
-        "projectId": "c39512a2-25d1-494e-a922-f5016dbc7b97"
-      }
-    },
-    "runtimeVersion": "1.1.3",
-    "updates": {
-      "url": "https://u.expo.dev/c39512a2-25d1-494e-a922-f5016dbc7b97"
+  "name": "Smart Safe",
+  "slug": "smart-safe",
+  "version": "1.1.3",
+  "orientation": "portrait",
+  "icon": "./src/assets/Logo-Atual.png",
+  "userInterfaceStyle": "light",
+  "newArchEnabled": true,
+  "splash": {
+    "image": "./src/assets/FundoSplashOriginal.png",
+    "resizeMode": "cover",
+    "backgroundColor": "#ffffff"
+  },
+  "assetBundlePatterns": [
+    "**/*"
+  ],
+  "ios": {
+    "supportsTablet": true,
+    "bundleIdentifier": "com.yourcompany.yourappname",
+    "infoPlist": {
+      "UIFileSharingEnabled": true,
+      "NSPhotoLibraryUsageDescription": "Permite o acesso à biblioteca de fotos para selecionar imagens.",
+      "NSCameraUsageDescription": "Permite o acesso à câmera para tirar fotos.",
+      "NSMicrophoneUsageDescription": "Permite o acesso ao microfone para gravar áudio."
     }
+  },
+  "android": {
+    "adaptiveIcon": {
+      "foregroundImage": "./src/assets/foregroundImage.png",
+      "backgroundColor": "#45227d"
+    },
+    "package": "com.yourcompany.yourappname",
+    "config": {
+      "googleMaps": {
+        "apiKey": "AIzaSyDvHfMvLMgqaQADb5TyDpbdNuiNjDuKpm0"
+      }
+    }
+  },
+  "web": {
+    "favicon": "./src/assets/Logo-Atual.png"
+  },
+  "plugins": [
+    [
+      "expo-secure-store",
+      {
+        "faceIDPermission": "Allow $(PRODUCT_NAME) to access your Face ID biometric data."
+      }
+    ],
+    "expo-font"
+  ],
+  "extra": {
+    "eas": {
+      "projectId": "c39512a2-25d1-494e-a922-f5016dbc7b97"
+    }
+  },
+  "runtimeVersion": "1.1.3",
+  "updates": {
+    "url": "https://u.expo.dev/c39512a2-25d1-494e-a922-f5016dbc7b97"
   }
+}
 }
