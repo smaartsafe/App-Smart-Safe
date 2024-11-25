@@ -15,7 +15,6 @@ import ResetPasswordScreen from "./screens/ResetPasswordScreen/ResetPassword";
 import DadosdoUsuario from "./screens/dadosdoUsuario/Dados";
 import MapScreen from "./screens/mapa/mapaScreen";
 import Cadastro from "./screens/cadastro/CadastroScreen";
-
 import Audio from "./screens/audio/Audio";
 import Emergencia from "./screens/ContatosdeEmergencia/ContatosEmergencia";
 import { getAuth } from "firebase/auth";

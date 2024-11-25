@@ -78,7 +78,7 @@ const ChatScreen = () => {
     ]}>
       {item.sender === 'bot' && (
         <Image
-          source={{ uri: 'https://ui-avatars.com/api/?name=Bot&background=007AFF&color=fff' }}
+          source={{ uri: 'https://ui-avatars.com/api/?name=Bot&background=E9ECEF&color=000' }}
           style={styles.avatar}
         />
       )}
@@ -97,7 +97,7 @@ const ChatScreen = () => {
       </View>
       {item.sender === 'user' && (
         <Image
-          source={{ uri: 'https://ui-avatars.com/api/?name=User&background=E9ECEF&color=333' }}
+          source={{ uri: 'https://ui-avatars.com/api/?name=User&background=9344fa&color=fff' }}
           style={styles.avatar}
         />
       )}
@@ -121,7 +121,7 @@ const ChatScreen = () => {
     >
       <View style={styles.messageRow}>
         <Image
-          source={{ uri: 'https://ui-avatars.com/api/?name=Bot&background=007AFF&color=fff' }}
+          source={{ uri: 'https://ui-avatars.com/api/?name=Bot&background=E9ECEF&color=000' }}
           style={styles.avatar}
         />
         <View style={styles.typingIndicatorBubble}>
@@ -186,7 +186,7 @@ const ChatScreen = () => {
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
-    backgroundColor: '#3c0c7b' 
+    backgroundColor: '#f1f1f1' 
   },
   messagesList: { 
     paddingVertical: 15
@@ -206,7 +206,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    marginHorizontal: 8,
+    marginHorizontal: 6,
   },
   messageContainer: {
     maxWidth: '70%',
@@ -255,7 +255,7 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     padding: 16,
-    backgroundColor: '#9344fa',
+    backgroundColor: '#fff',
     alignItems: 'flex-end',
     alignItems: 'center',
   },
@@ -270,7 +270,7 @@ const styles = StyleSheet.create({
     maxHeight: 100,
   },
   sendButton: {
-    backgroundColor: '#3c0c7b',
+    backgroundColor: '#9344fa',
     borderRadius: 20,
     padding: 12,
     alignItems: 'center',
