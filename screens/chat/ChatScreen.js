@@ -97,7 +97,7 @@ const ChatScreen = () => {
       </View>
       {item.sender === 'user' && (
         <Image
-          source={{ uri: 'https://ui-avatars.com/api/?name=User&background=E9ECEF&color=333' }}
+          source={{ uri: 'https://ui-avatars.com/api/?name=User&background=9344fa&color=fff' }}
           style={styles.avatar}
         />
       )}
@@ -186,7 +186,7 @@ const ChatScreen = () => {
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
-    backgroundColor: '#3c0c7b' 
+    backgroundColor: '#f1f1f1' 
   },
   messagesList: { 
     paddingVertical: 15
@@ -218,7 +218,7 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 4,
   },
   botMessage: { 
-    backgroundColor: '#E9ECEF',
+    backgroundColor: '#007AFF',
     borderBottomLeftRadius: 4,
   },
   messageText: { 
@@ -228,7 +228,7 @@ const styles = StyleSheet.create({
     color: '#fff'
   },
   botMessageText: {
-    color: '#333'
+    color: '#fff'
   },
   typingIndicatorContainer: {
     paddingHorizontal: 16,
@@ -255,7 +255,7 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     padding: 16,
-    backgroundColor: '#9344fa',
+    backgroundColor: '#fff',
     alignItems: 'flex-end',
     alignItems: 'center',
   },
@@ -270,7 +270,7 @@ const styles = StyleSheet.create({
     maxHeight: 100,
   },
   sendButton: {
-    backgroundColor: '#3c0c7b',
+    backgroundColor: '#9344fa',
     borderRadius: 20,
     padding: 12,
     alignItems: 'center',

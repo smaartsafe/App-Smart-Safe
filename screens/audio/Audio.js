@@ -18,6 +18,7 @@ import {
   deleteObject,
 } from "firebase/storage";
 import { FontAwesome } from "@expo/vector-icons";
+
 import { format } from "date-fns";
 import { Audio } from "expo-av";
 import Slider from "@react-native-community/slider";
@@ -311,7 +312,7 @@ const AudioScreen = () => {
             <FontAwesome
               name={audioStatus.isPlaying ? "pause" : "play"}
               size={24}
-              color="#4CAF50"
+              color="#9344fa"
             />
           </TouchableOpacity>
           <Slider
@@ -320,9 +321,9 @@ const AudioScreen = () => {
             maximumValue={audioStatus.durationMillis}
             value={sliderValue}
             onValueChange={handleSliderChange}
-            minimumTrackTintColor="#4CAF50"
+            minimumTrackTintColor="#9344fa"
             maximumTrackTintColor="#000000"
-            thumbTintColor="#4CAF50"
+            thumbTintColor="#9344fa"
           />
           <TouchableOpacity
             style={styles.audioControls}
@@ -352,7 +353,7 @@ const AudioScreen = () => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Seus Áudios Gravados</Text>
+      <Text style={styles.title}> Áudios Gravados</Text>
       {loading ? (
         <ActivityIndicator size="large" color="#4CAF50" />
       ) : (
@@ -393,7 +394,7 @@ const styles = StyleSheet.create({
   audioItem: {
     backgroundColor: "#f9f9f9",
     borderRadius: 8,
-    padding: 16,
+    padding: 12,
     marginBottom: 16,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
