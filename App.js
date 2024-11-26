@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
 import { createDrawerNavigator } from "@react-navigation/drawer";
-import Icon from "react-native-vector-icons/FontAwesome";
+import Ionicons  from "@expo/vector-icons/Ionicons";
 import { TouchableOpacity, StyleSheet, Image, StatusBar } from "react-native";
 import LoginCadastroScreen from "./screens/loginEcadastro/LoginCadastroScreen";
 import LoginScreen from "./screens/login/LoginScreen";
@@ -69,9 +69,11 @@ const MainTabs = ({ navigation }) => {
         drawerInactiveTintColor: "#fff",
         itemStyle: { marginVertical: 5 }, // Para margens verticais
         drawerLabelStyle: {
-          fontSize: 18, 
+          fontSize: 15, 
           paddingVertical: 1,
           marginLeft: -20, // Esse valor também pode ser ajustado se necessário
+          fontWeight: 400,
+          letterSpacing: 1,
         },
         headerStyle: {
           height: 95,
@@ -107,7 +109,7 @@ const MainTabs = ({ navigation }) => {
         options={{
           headerTitle: "",
           drawerIcon: ({ color, size }) => (
-            <Icon name="home" size={20} color={color} />
+            <Ionicons name="home-outline" size={20} color={color} />
           ),
         }}
       />
@@ -117,7 +119,7 @@ const MainTabs = ({ navigation }) => {
         options={{
           headerTitle: "",
           drawerIcon: ({ color, size }) => (
-            <Icon name="plus" size={20} color={color} />
+            <Ionicons name="add-outline" size={20} color={color} />
           ),
         }}
       />
@@ -127,7 +129,7 @@ const MainTabs = ({ navigation }) => {
         options={{
           headerTitle: "",
           drawerIcon: ({ color, size }) => (
-            <Icon name="phone" size={20} color={color} />
+            <Ionicons name="call-outline" size={20} color={color} />
           ),
         }}
       />
@@ -137,7 +139,7 @@ const MainTabs = ({ navigation }) => {
         options={{
           headerTitle: "",
           drawerIcon: ({ color, size }) => (
-            <Icon name="music" size={20} color={color} />
+            <Ionicons name="musical-notes-outline" size={20} color={color} />
           ),
         }}
       />
@@ -147,7 +149,7 @@ const MainTabs = ({ navigation }) => {
         options={{
           headerTitle: "",
           drawerIcon: ({ color, size }) => (
-            <Icon name="user" size={20} color={color} />
+            <Ionicons name="chatbubbles-outline" size={20} color={color} />
           ),
         }}
       />

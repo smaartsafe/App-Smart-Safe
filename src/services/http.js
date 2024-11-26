@@ -2,7 +2,7 @@ import axios from 'axios';
 
 const api = axios.create({
   baseURL: 'https://endpointsmartsafe.online/api', // Use o domínio em vez do IP
-  timeout: 5000,
+  // timeout: 15000,
   headers: {
     'Content-Type': 'application/json',
   },

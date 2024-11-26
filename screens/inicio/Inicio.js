@@ -300,7 +300,7 @@ const Inicio = () => {
         style={styles.emergencyButton}
         onPress={handleEmergencyCall}
       >
-        <Ionicons name="call" size={27} color="white" />
+        <Ionicons name="call-outline" size={27} color="white" />
         <Text style={styles.emergencyText}>
           Acionar contato de emergência pessoal
         </Text>

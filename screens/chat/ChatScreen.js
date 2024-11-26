@@ -12,13 +12,11 @@ const ChatScreen = () => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   const fadeIn = () => {
-    Animated.sequence([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-    ]).start();
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
   };
 
   const fadeOut = () => {
@@ -41,31 +39,23 @@ const ChatScreen = () => {
     try {
       const response = await api.post('/chat', { query: inputText });
       const botAnswer = response.data.response || 'Resposta não encontrada.';
-      
-      const sentences = botAnswer.split('. ');
+      console.log('Resposta do bot:', botAnswer);
 
-      let messageIndex = 0;
-      const intervalId = setInterval(() => {
-        if (messageIndex < sentences.length) {
-          const botMessage = {
-            id: Date.now() + messageIndex + 1,
-            text: sentences[messageIndex] + (sentences[messageIndex].endsWith('.') ? '' : '.'),
-            sender: 'bot',
-          };
-          setMessages((prevMessages) => [...prevMessages, botMessage]);
-          messageIndex++;
-        } else {
-          clearInterval(intervalId);
-          fadeOut();
-          setIsLoading(false);
-        }
-      }, 2000);
+      // Adiciona a resposta completa do bot em um único bloco
+      const botMessage = {
+        id: Date.now(),
+        text: botAnswer,
+        sender: 'bot',
+      };
+      setMessages((prevMessages) => [...prevMessages, botMessage]);
+      fadeOut();
+      setIsLoading(false);
     } catch (error) {
       console.error('Erro:', error);
       fadeOut();
       setMessages((prevMessages) => [
         ...prevMessages,
-        { id: Date.now() + 1, text: 'Erro ao obter resposta.', sender: 'bot' },
+        { id: Date.now(), text: 'Erro ao obter resposta.', sender: 'bot' },
       ]);
       setIsLoading(false);
     }
@@ -243,20 +233,10 @@ const styles = StyleSheet.create({
     minWidth: 60, // Garante uma largura mínima para o bubble
     minHeight: 40, // Garante uma altura mínima para o bubble
   },
-  typingAnimationContainer: {
-    width: 40, // Largura fixa para o container da animação
-    height: 10, // Altura fixa para o container da animação
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  typingAnimation: {
-    marginLeft: 4,
-  },
   inputContainer: {
     flexDirection: 'row',
     padding: 16,
     backgroundColor: '#fff',
-    alignItems: 'flex-end',
     alignItems: 'center',
   },
   input: {
