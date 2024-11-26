@@ -10,6 +10,7 @@ import {
   SafeAreaView,
   Linking,
   StatusBar,
+  Animated
 } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import * as Contacts from "expo-contacts";
@@ -251,7 +252,7 @@ const AdicionarContatoScreen = () => {
       <Animated.View style={styles.contactContainer}>
         <View style={styles.contactItem}>
           <View style={styles.contactMainInfo}>
-            <View style={[styles.avatarContainer, { backgroundColor: getRandomColor(item.name) }]}>
+            <View style={[styles.avatarContainer, ]}>
               <Text style={styles.avatarText}>
                 {item.name.charAt(0).toUpperCase()}
               </Text>
@@ -286,6 +287,13 @@ const AdicionarContatoScreen = () => {
               style={[styles.actionButton, styles.messageButton]}
             >
               <Ionicons name="chatbubble" size={22} color="#fff" />
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              onPress={() => handleDeleteContact(index)}
+              style={[styles.actionButton, styles.deleteButton]}
+            >
+              <Ionicons name="trash" size={22} color="#fff" />
             </TouchableOpacity>
           </View>
         </View>
@@ -327,7 +335,7 @@ const AdicionarContatoScreen = () => {
         {addedContacts.length === 0 ? (
           <View style={styles.emptyState}>
             <View style={styles.emptyStateIconContainer}>
-              <Ionicons name="people" size={64} color="#fff" />
+              <Ionicons name="people-outline" size={64} color="#fff" />
             </View>
             <Text style={styles.emptyStateText}>Sua lista está vazia</Text>
             <Text style={styles.emptyStateSubText}>
@@ -348,7 +356,10 @@ const AdicionarContatoScreen = () => {
       <Modal visible={showContactListModal} animationType="slide">
         <SafeAreaView style={styles.modalContainer}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Novo Contato</Text>
+            <View style={styles.modalTitleContainer}>
+              <Ionicons name="person-add-outline" size={24} color="#fff" />
+              <Text style={styles.modalTitle}>Novo Contato</Text>
+            </View>
             <TouchableOpacity
               style={styles.closeButton}
               onPress={() => {
@@ -429,7 +440,7 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#252542',
+    backgroundColor: '#fff',
     marginHorizontal: 20,
     borderRadius: 12,
     paddingHorizontal: 16,
@@ -441,7 +452,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     height: 50,
-    color: '#fff',
+    color: '#666',
     fontSize: 16,
   },
   addedContactsContainer: {
@@ -462,12 +473,13 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   avatarContainer: {
-    width: 56,
-    height: 56,
+    width: 46,
+    height: 46,
     borderRadius: 28,
-    justifyContent: 'center',
     alignItems: 'center',
+    justifyContent: 'center',
     marginRight: 16,
+    backgroundColor: '#9344fa',  
   },
   avatarText: {
     fontSize: 24,
@@ -508,6 +520,9 @@ const styles = StyleSheet.create({
   messageButton: {
     backgroundColor: '#4B50FF',
   },
+  deleteButton:{
+    backgroundColor: '#FF4B6E',
+  },
   emptyState: {
     flex: 1,
     justifyContent: 'center',
@@ -517,7 +532,7 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: '#252542',
+    backgroundColor: '#9344fa',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 24,
@@ -534,7 +549,7 @@ const styles = StyleSheet.create({
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: "#1A1A2E",
+    backgroundColor: "#3c0c7b",
   },
   modalHeader: {
     flexDirection: 'row',
@@ -542,28 +557,34 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#252542',
+    borderBottomColor: '#fff',
+  },
+  modalTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   modalTitle: {
     fontSize: 24,
-    fontWeight: "600",
+    fontWeight: "400",
     color: '#fff',
   },
   closeButton: {
     marginLeft: 16,
+
   },
   closeButtonInner: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#252542',
+    backgroundColor: '#9344fa',
     justifyContent: 'center',
     alignItems: 'center',
   },
   modalSearchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#252542',
+    backgroundColor: '#fff',
     margin: 20,
     borderRadius: 12,
     paddingHorizontal: 16,
@@ -571,12 +592,70 @@ const styles = StyleSheet.create({
   modalSearchInput: {
     flex: 1,
     height: 50,
-    color: '#fff',
+    color: '#666',
     fontSize: 16,
+  },
+  modalContactItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
   },
   modalList: {
     paddingHorizontal: 20,
+    color: '#fff',
   },
+  modalListItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalAvatarContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  modalAvatarText: {
+    fontSize: 24,
+    color: '#fff',
+    fontWeight: '600',
+  },
+  contactInfo: {
+    gap: 4,
+  },
+  modalContactName: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: '#fff',
+  },
+  modalContactNumber: {
+    fontSize: 16,
+    color: "#666",
+    marginBottom: 10,
+  },
+  modalContactActions: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 12,
+  },
+  modalActionButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalFavoriteButton: {
+    backgroundColor: '#2A2A42',
+  },
+  modalCallButton: {
+      backgroundColor: '#4CAF50',
+  },
+  modalMessageButton: {
+    backgroundColor: '#4B50FF',
+    },
 });
 
 export default AdicionarContatoScreen;

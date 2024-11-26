@@ -193,7 +193,7 @@ const DadosdoUsuario = () => {
               </View>
             </View>
             <View style={styles.userData}>
-              <Ionicons name="id-card" size={24} color="white" style={styles.labelIcon} />
+              <Ionicons name="id-card-outline" size={24} color="white" style={styles.labelIcon} />
               <View style={styles.labelValueContainer}>
                 <Text style={styles.label}>CPF:</Text>
                 <Text style={styles.value}>{perfilData.cpf}</Text>
