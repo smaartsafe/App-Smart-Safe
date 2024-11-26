@@ -17,7 +17,7 @@ import {
   getDownloadURL,
   deleteObject,
 } from "firebase/storage";
-import { FontAwesome } from "@expo/vector-icons";
+import { FontAwesome, Ionicons } from "@expo/vector-icons";
 import { format } from "date-fns";
 import { Audio } from "expo-av";
 import Slider from "@react-native-community/slider";
@@ -311,7 +311,7 @@ const AudioScreen = () => {
             <FontAwesome
               name={audioStatus.isPlaying ? "pause" : "play"}
               size={24}
-              color="#4CAF50"
+              color="#9344fa"
             />
           </TouchableOpacity>
           <Slider
@@ -320,9 +320,9 @@ const AudioScreen = () => {
             maximumValue={audioStatus.durationMillis}
             value={sliderValue}
             onValueChange={handleSliderChange}
-            minimumTrackTintColor="#4CAF50"
+            minimumTrackTintColor="#9344fa"
             maximumTrackTintColor="#000000"
-            thumbTintColor="#4CAF50"
+            thumbTintColor="#9344fa"
           />
           <TouchableOpacity
             style={styles.audioControls}
@@ -354,7 +354,7 @@ const AudioScreen = () => {
     <View style={styles.container}>
       <Text style={styles.title}>Seus Áudios Gravados</Text>
       {loading ? (
-        <ActivityIndicator size="large" color="#4CAF50" />
+        <ActivityIndicator size="large" color="#9344fa" />
       ) : (
         <FlatList
           data={audioList}
@@ -371,6 +371,7 @@ const AudioScreen = () => {
         style={styles.deleteAllButton}
         onPress={confirmDeleteAll}
       >
+        <Ionicons name="trash" size={24} color="red" />
         <Text style={styles.deleteAllButtonText}>Excluir Todos os Áudios</Text>
       </TouchableOpacity>
     </View>
@@ -440,6 +441,13 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: "center",
     marginTop: 16,
+    flexDirection: "row",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   deleteAllButtonText: {
     color: "#fff",

@@ -1,4 +1,4 @@
-import { getAuth } from "@firebase/auth";
+import { getAuth } from "firebase/auth";
 import { getDatabase, get, ref, child } from "firebase/database";
 import { app } from "../config/firebase";
 

@@ -1,39 +1,93 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Linking, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Linking, ScrollView, Platform } from 'react-native';
+import Ionicons  from '@expo/vector-icons/Ionicons';
 
-export const ContatosDeEmergencia = () => {
+const EmergencyContacts = () => {
+  const emergencyContacts = [
+    { 
+      title: 'Bombeiros', 
+      number: '193', 
+      icon: 'flame-outline', 
+      color: '#FF6347' 
+    },
+    { 
+      title: 'Polícia Civil', 
+      number: '197', 
+      icon: 'shield-half-outline', 
+      color: '#4169E1' 
+    },
+    { 
+      title: 'Delegacia da Mulher', 
+      number: '180', 
+      icon: 'female-outline', 
+      color: '#FF69B4' 
+    },
+    { 
+      title: 'Ambulância', 
+      number: '192', 
+      icon: 'bandage-outline', 
+      color: '#32CD32' 
+    },
+    { 
+      title: 'SAMU', 
+      number: '192', 
+      icon: 'medkit-outline', 
+      color: '#1E90FF' 
+    },
+    { 
+      title: 'Centro da Mulher', 
+      number: '180', 
+      icon: 'heart-outline', 
+      color: '#FF1493' 
+    }
+  ];
 
-  const fazerLigacao = (numero) => {
-    // Lógica para fazer a ligação para o número de emergência
-    Linking.openURL(`tel:${numero}`)
+  const makeEmergencyCall = (number) => {
+    const phoneUrl = Platform.OS === 'android' 
+      ? `tel:${number}` 
+      : `telprompt:${number}`;
+
+    Linking.canOpenURL(phoneUrl)
+      .then((supported) => {
+        if (supported) {
+          return Linking.openURL(phoneUrl);
+        }
+      })
       .catch((err) => console.error('Erro ao fazer a ligação:', err));
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.scrollViewContainer}>
+    <ScrollView 
+      contentContainerStyle={styles.scrollViewContainer}
+      showsVerticalScrollIndicator={false}
+    >
       <View style={styles.container}>
-        <View style={styles.coluna}>
-          <TouchableOpacity style={styles.quadrado} onPress={() => fazerLigacao('193')}>
-            <Text style={styles.texto}>Bombeiros</Text>
+        {emergencyContacts.map((contact, index) => (
+          <TouchableOpacity 
+            key={index}
+            style={[styles.contactButton, { backgroundColor: contact.color }]}
+            onPress={() => makeEmergencyCall(contact.number)}
+            activeOpacity={0.7}
+          >
+            <View style={styles.buttonContent}>
+              {contact.icon.startsWith('fa') ? (
+                <Ionicons 
+                  name={contact.icon.split('-')[1]} 
+                  size={40} 
+                  color="white" 
+                />
+              ) : (
+                <Ionicons 
+                  name={contact.icon} 
+                  size={40} 
+                  color="white" 
+                />
+              )}
+              <Text style={styles.buttonText}>{contact.title}</Text>
+              <Text style={styles.numberText}>{contact.number}</Text>
+            </View>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.quadrado} onPress={() => fazerLigacao('197')}>
-            <Text style={styles.texto}>Polícia Civil</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.quadrado} onPress={() => fazerLigacao('180')}>
-            <Text style={styles.texto}>Delegacia da Mulher</Text>
-          </TouchableOpacity>
-        </View>
-        <View style={styles.coluna}>
-          <TouchableOpacity style={styles.quadrado} onPress={() => fazerLigacao('192')}>
-            <Text style={styles.texto}>Ambulância</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.quadrado} onPress={() => fazerLigacao('192')}>
-            <Text style={styles.texto}>SAMU</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.quadrado} onPress={() => fazerLigacao('180')}>
-            <Text style={styles.texto}>Centro da Mulher</Text>
-          </TouchableOpacity>
-        </View>
+        ))}
       </View>
     </ScrollView>
   );
@@ -42,34 +96,45 @@ export const ContatosDeEmergencia = () => {
 const styles = StyleSheet.create({
   scrollViewContainer: {
     flexGrow: 1,
-    backgroundColor: '#3c0c7b',
+    backgroundColor: '#0A2342',
+    paddingVertical: 20,
+    paddingHorizontal: 10,
   },
   container: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
+    flexDirection: 'row', 
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 20,
   },
-  coluna: {
-    flexDirection: 'column',
+  contactButton: {
+    width: '48%', 
+    aspectRatio: 1,
+    borderRadius: 15,
+    marginBottom: 15,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
-  quadrado: {
-    backgroundColor: '#9344fa',
-    borderRadius: 5,
-    marginBottom: 20,
-    alignItems: 'center',
-    height: 180,
-    width: 150,
-    borderRadius: 10,
+  buttonContent: {
+    flex: 1,
     justifyContent: 'center',
-    flexDirection: 'column'
+    alignItems: 'center',
+    padding: 10,
   },
-  texto: {
-    marginBottom: 10,
+  buttonText: {
     color: 'white',
     fontSize: 16,
-    fontWeight: 'bold'
+    fontWeight: 'bold',
+    marginTop: 10,
+    textAlign: 'center',
   },
+  numberText: {
+    color: 'white',
+    fontSize: 14,
+    marginTop: 5,
+  }
 });
 
-export default ContatosDeEmergencia;
+export default EmergencyContacts;

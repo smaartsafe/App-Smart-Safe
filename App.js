@@ -70,8 +70,7 @@ const MainTabs = ({ navigation }) => {
         itemStyle: { marginVertical: 5 }, // Para margens verticais
         drawerLabelStyle: {
           fontSize: 15, 
-          paddingVertical: 1,
-          marginLeft: -20, // Esse valor também pode ser ajustado se necessário
+          paddingVertical: 3,
           fontWeight: 400,
           letterSpacing: 1,
         },
@@ -119,7 +118,7 @@ const MainTabs = ({ navigation }) => {
         options={{
           headerTitle: "",
           drawerIcon: ({ color, size }) => (
-            <Ionicons name="add-outline" size={20} color={color} />
+            <Ionicons name="person-add-outline" size={20} color={color} />
           ),
         }}
       />
@@ -129,7 +128,7 @@ const MainTabs = ({ navigation }) => {
         options={{
           headerTitle: "",
           drawerIcon: ({ color, size }) => (
-            <Ionicons name="call-outline" size={20} color={color} />
+            <Ionicons name="keypad-outline" size={20} color={color} />
           ),
         }}
       />

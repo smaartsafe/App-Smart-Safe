@@ -337,8 +337,8 @@ const Perfil = ({ navigation }) => {
                 )}`,
             }}
             style={{
-              width: 200,
-              height: 200,
+              width: 150,
+              height: 150,
               borderRadius: 200 / 2,
               borderWidth: 5,
               borderColor: "#ccc",
@@ -401,12 +401,12 @@ const Perfil = ({ navigation }) => {
 
       <View style={styles.buttonsContainer}>
         <TouchableOpacity style={styles.button} onPress={handleDataUser}>
-          <Ionicons name="person-outline" size={20} color="#fff" />
-          <Text style={styles.buttonText}>Editar Perfil</Text>
+          <Ionicons name="pencil-outline" size={20} color="#fff" />
+          <Text style={styles.buttonText}>Editar Informações</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.button} onPress={handleLogout}>
           <Ionicons name="log-out-outline" size={20} color="#fff" />
-          <Text style={styles.buttonText}>Sair</Text>
+          <Text style={styles.buttonText}>Log out</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.button} onPress={handleGoToMap}>
           {loadingMap ? (
