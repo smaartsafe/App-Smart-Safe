@@ -15,9 +15,8 @@ import {
   listAll,
   getMetadata,
   getDownloadURL,
-  deleteObject,
 } from "firebase/storage";
-import { FontAwesome, Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { format } from "date-fns";
 import { Audio } from "expo-av";
 import Slider from "@react-native-community/slider";
@@ -67,21 +66,16 @@ const AudioScreen = () => {
           const createdAt = metadata.timeCreated;
           const audioNumber = item.name.split("_")[0];
           const url = await getDownloadURL(item);
-          const sound = new Audio.Sound();
-          await sound.loadAsync({ uri: url });
-          const status = await sound.getStatusAsync();
-          await sound.unloadAsync(); // Unload sound to prevent memory leaks
+
           return {
-            item,
             createdAt,
             audioNumber,
-            durationMillis: status.durationMillis,
+            durationMillis: 0, // Será definido quando o áudio for carregado
             url,
           };
         })
       );
 
-      // Ordena os áudios pelo mais recente primeiro
       audioListWithMetadata.sort(
         (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
       );
@@ -100,246 +94,151 @@ const AudioScreen = () => {
     fetchAudioList(userUid);
   };
 
-  const deleteAudio = async (audioNumber) => {
+  const formatTime = (millis) => {
+    const minutes = Math.floor(millis / 60000);
+    const seconds = Math.floor((millis % 60000) / 1000);
+    return `${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
+  };
+
+const AudioItem = ({ createdAt, audioNumber, url }) => {
+  const [soundObject, setSoundObject] = useState(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [sliderValue, setSliderValue] = useState(0);
+  const [audioStatus, setAudioStatus] = useState({
+    positionMillis: 0,
+    durationMillis: 0,
+  });
+
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Carrega o áudio na primeira renderização
+  useEffect(() => {
+    const loadAudio = async () => {
+      try {
+        setIsLoading(true);
+        const newSound = new Audio.Sound();
+        await newSound.loadAsync(
+          { uri: url },
+          { shouldPlay: false, isLooping: false }
+        );
+        const status = await newSound.getStatusAsync();
+        setAudioStatus({
+          positionMillis: status.positionMillis,
+          durationMillis: status.durationMillis,
+        });
+        setSoundObject(newSound);
+      } catch (error) {
+        console.error("Erro ao carregar áudio:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadAudio();
+
+    return () => {
+      if (soundObject) {
+        soundObject.unloadAsync(); // Descarrega o áudio ao desmontar
+      }
+    };
+  }, [url]); // Só executa quando a URL muda
+
+  // Atualiza o estado do áudio durante a reprodução
+  useEffect(() => {
+  if (soundObject) {
+    soundObject.setOnPlaybackStatusUpdate((status) => {
+      if (status.isLoaded) {
+        setAudioStatus({
+          positionMillis: status.positionMillis,
+          durationMillis: status.durationMillis,
+        });
+        setSliderValue(status.positionMillis);
+
+        // Quando o áudio terminar, apenas pare e não reinicie
+        if (status.didJustFinish) {
+          setIsPlaying(false);
+          setSliderValue(status.durationMillis); // Ajusta o slider para o final
+          soundObject.stopAsync(); // Para a reprodução
+        }
+      }
+    });
+  }
+
+  return () => {
+    if (soundObject) {
+      soundObject.setOnPlaybackStatusUpdate(null); // Remove callback ao desmontar
+    }
+  };
+}, [soundObject]);
+
+
+  const handlePlayPause = async () => {
     try {
-      const storage = getStorage();
-      const audioRef = ref(storage, `recordings/${userUid}/${audioNumber}`);
-      await deleteObject(audioRef);
-      Alert.alert("Sucesso", "Áudio excluído com sucesso.");
-      fetchAudioList(userUid);
+      if (isPlaying) {
+        await soundObject.pauseAsync();
+      } else if (!isLoading) {
+        await soundObject.playAsync();
+      }
+      setIsPlaying(!isPlaying);
     } catch (error) {
-      console.error("Erro ao excluir áudio:", error);
-      Alert.alert("Erro", "Falha ao excluir o áudio");
+      console.error("Erro ao alternar play/pause:", error);
+      Alert.alert("Erro", "Falha ao reproduzir ou pausar o áudio.");
     }
   };
 
-  const confirmDeleteAll = async () => {
-    Alert.alert(
-      "Excluir todos os áudios",
-      "Tem certeza de que deseja excluir todos os áudios?",
-      [
-        {
-          text: "Cancelar",
-          style: "cancel",
-        },
-        {
-          text: "Sim",
-          onPress: deleteAllAudios,
-        },
-      ],
-      { cancelable: false }
-    );
-  };
-
-  const deleteAllAudios = async () => {
+  const handleSliderChange = async (value) => {
     try {
-      setLoading(true);
-      const storage = getStorage();
-      await Promise.all(
-        audioList.map(async (audio) => {
-          const audioRef = ref(
-            storage,
-            `recordings/${userUid}/${audio.audioNumber}`
-          );
-          await deleteObject(audioRef);
-        })
-      );
-      Alert.alert("Sucesso", "Todos os áudios foram excluídos com sucesso.");
-      setAudioList([]);
+      if (soundObject) {
+        await soundObject.setPositionAsync(value);
+        setSliderValue(value);
+      }
     } catch (error) {
-      console.error("Erro ao excluir todos os áudios:", error);
-      Alert.alert("Erro", "Falha ao excluir todos os áudios");
-    } finally {
-      setLoading(false);
+      console.error("Erro ao ajustar posição do áudio:", error);
     }
   };
 
   const formatTime = (millis) => {
     const minutes = Math.floor(millis / 60000);
-    const seconds = ((millis % 60000) / 1000).toFixed(0);
+    const seconds = Math.floor((millis % 60000) / 1000);
     return `${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
   };
 
-  const AudioItem = ({ createdAt, audioNumber, durationMillis, url }) => {
-    const [sliderValue, setSliderValue] = useState(0);
-    const [soundObject, setSoundObject] = useState(null);
-    const [audioStatus, setAudioStatus] = useState({
-      isPlaying: false,
-      positionMillis: 0,
-      durationMillis: durationMillis,
-    });
+  return (
+  <View style={styles.audioItem}>
+    <Text style={styles.audioTitle}>
+      Áudio {audioNumber} - {format(new Date(createdAt), "dd/MM/yyyy")}
+    </Text>
+    <View style={styles.controlsContainer}>
+      <TouchableOpacity
+        onPress={handlePlayPause}
+        disabled={isLoading}
+        style={styles.playPauseButton}
+      >
+        <Ionicons
+          name={isPlaying ? "pause" : "play"}
+          size={24}
+          color={isLoading ? "gray" : "#9344fad"}
+        />
+      </TouchableOpacity>
+      <Slider
+  style={styles.slider}
+  minimumValue={0}
+  maximumValue={audioStatus.durationMillis || 1}
+  value={sliderValue}
+  onSlidingComplete={handleSliderChange}
+  thumbTintColor="#9344fa" // Cor do ponto
+  minimumTrackTintColor="#9344fa" // Cor da parte já reproduzida
+  maximumTrackTintColor="#ddd" // Cor da parte não reproduzida
+/>
+    </View>
+    <Text style={styles.time}>
+      {formatTime(audioStatus.positionMillis)} /{" "}
+      {formatTime(audioStatus.durationMillis)}
+    </Text>
+  </View>
+);
+};
 
-    useEffect(() => {
-      return () => {
-        if (soundObject) {
-          soundObject.unloadAsync();
-        }
-      };
-    }, [soundObject]);
-
-    useEffect(() => {
-      if (audioStatus.isPlaying) {
-        const interval = setInterval(async () => {
-          if (soundObject) {
-            const status = await soundObject.getStatusAsync();
-            if (status.isPlaying) {
-              setSliderValue(status.positionMillis);
-              setAudioStatus((prevStatus) => ({
-                ...prevStatus,
-                positionMillis: status.positionMillis,
-              }));
-            } else {
-              clearInterval(interval);
-            }
-          }
-        }, 1000);
-        return () => clearInterval(interval);
-      } else {
-        setSliderValue(0); // Reset slider when not playing
-      }
-    }, [audioStatus.isPlaying, soundObject]);
-
-    const playAudio = async () => {
-      try {
-        let newSoundObject = soundObject;
-
-        if (!newSoundObject) {
-          newSoundObject = new Audio.Sound();
-          await newSoundObject.loadAsync({
-            uri: url,
-            positionMillis: audioStatus.positionMillis,
-          });
-          setSoundObject(newSoundObject);
-        }
-
-        await newSoundObject.playAsync();
-        newSoundObject.setOnPlaybackStatusUpdate(onPlaybackStatusUpdate);
-        setAudioStatus((prevStatus) => ({
-          ...prevStatus,
-          isPlaying: true,
-        }));
-      } catch (error) {
-        console.error("Erro ao reproduzir áudio:", error);
-        Alert.alert("Erro", "Falha ao reproduzir o áudio");
-      }
-    };
-
-    const pauseAudio = async () => {
-      try {
-        if (soundObject) {
-          await soundObject.pauseAsync();
-          setAudioStatus((prevStatus) => ({
-            ...prevStatus,
-            isPlaying: false,
-          }));
-        }
-      } catch (error) {
-        console.error("Erro ao pausar áudio:", error);
-        Alert.alert("Erro", "Falha ao pausar o áudio");
-      }
-    };
-
-    const onPlaybackStatusUpdate = (status) => {
-      if (status.isLoaded) {
-        if (status.didJustFinish) {
-          setAudioStatus((prevStatus) => ({
-            ...prevStatus,
-            isPlaying: false,
-            positionMillis: 0,
-          }));
-          setSliderValue(0); // Reset slider on finish
-        } else {
-          setAudioStatus((prevStatus) => ({
-            ...prevStatus,
-            positionMillis: status.positionMillis,
-          }));
-          setSliderValue(status.positionMillis);
-        }
-      }
-    };
-
-    const handlePlayPause = async () => {
-      if (audioStatus.isPlaying) {
-        await pauseAudio();
-      } else {
-        await playAudio();
-      }
-    };
-
-    const handleSliderChange = async (value) => {
-      try {
-        if (soundObject) {
-          await soundObject.setPositionAsync(value);
-          setSliderValue(value);
-          setAudioStatus((prevStatus) => ({
-            ...prevStatus,
-            positionMillis: value,
-          }));
-        }
-      } catch (error) {
-        console.error("Erro ao ajustar posição do áudio:", error);
-        Alert.alert("Erro", "Falha ao ajustar a posição do áudio");
-      }
-    };
-
-    const confirmDelete = () => {
-      Alert.alert(
-        "Excluir áudio",
-        "Tem certeza de que deseja excluir este áudio?",
-        [
-          {
-            text: "Cancelar",
-            style: "cancel",
-          },
-          { text: "Sim", onPress: () => deleteAudio(audioNumber) },
-        ],
-        { cancelable: false }
-      );
-    };
-
-    const formatDate = (createdAt) => {
-      return format(new Date(createdAt), "dd/MM/yyyy HH:mm");
-    };
-
-    return (
-      <View style={styles.audioItem}>
-        <View style={styles.controlsContainer}>
-          <TouchableOpacity
-            style={styles.audioControls}
-            onPress={handlePlayPause}
-          >
-            <FontAwesome
-              name={audioStatus.isPlaying ? "pause" : "play"}
-              size={24}
-              color="#9344fa"
-            />
-          </TouchableOpacity>
-          <Slider
-            style={styles.slider}
-            minimumValue={0}
-            maximumValue={audioStatus.durationMillis}
-            value={sliderValue}
-            onValueChange={handleSliderChange}
-            minimumTrackTintColor="#9344fa"
-            maximumTrackTintColor="#000000"
-            thumbTintColor="#9344fa"
-          />
-          <TouchableOpacity
-            style={styles.audioControls}
-            onPress={confirmDelete}
-          >
-            <FontAwesome name="trash" size={24} color="red" />
-          </TouchableOpacity>
-        </View>
-        <View style={styles.audioInfo}>
-          <Text style={styles.audioDate}>{formatDate(createdAt)}</Text>
-          <Text style={styles.audioDuration}>
-            {formatTime(audioStatus.durationMillis)}
-          </Text>
-        </View>
-      </View>
-    );
-  };
 
   const renderAudioItem = ({ item }) => (
     <AudioItem
@@ -367,13 +266,6 @@ const AudioScreen = () => {
           }
         />
       )}
-      <TouchableOpacity
-        style={styles.deleteAllButton}
-        onPress={confirmDeleteAll}
-      >
-        <Ionicons name="trash" size={24} color="red" />
-        <Text style={styles.deleteAllButtonText}>Excluir Todos os Áudios</Text>
-      </TouchableOpacity>
     </View>
   );
 };
@@ -396,7 +288,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 16,
     marginBottom: 16,
-    shadowColor: "#000",
+    shadowColor: "#9344fa",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
@@ -406,12 +298,19 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 8,
+    width: "100%", // Garante que o slider e o botão ocupem toda a largura
   },
-  audioControls: {
-    marginHorizontal: 8,
+  playPauseButton: {
+    marginRight: 8, // Espaçamento entre o botão de play e o slider
   },
   slider: {
-    flex: 1,
+    flex: 1, // Faz com que o slider ocupe o máximo de espaço disponível
+    
+  },
+  time: {
+    fontSize: 14,
+    color: "#333",
+    textAlign: "right",
   },
   audioInfo: {
     flexDirection: "row",
@@ -435,24 +334,7 @@ const styles = StyleSheet.create({
     color: "#666",
     marginTop: 16,
   },
-  deleteAllButton: {
-    backgroundColor: "#9344fa",
-    padding: 16,
-    borderRadius: 8,
-    alignItems: "center",
-    marginTop: 16,
-    flexDirection: "row",
-    justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  deleteAllButtonText: {
-    color: "#fff",
-    fontWeight: "bold",
-  },
+
 });
 
 export default AudioScreen;

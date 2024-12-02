@@ -96,6 +96,8 @@ const MainTabs = ({ navigation }) => {
                 width: 50,
                 height: 50,
                 borderRadius: 100,
+                borderWidth: 1,
+                borderColor: "#fff",
               }}
             />
           </TouchableOpacity>

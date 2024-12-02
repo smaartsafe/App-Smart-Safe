@@ -1,16 +1,17 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, TextInput, FlatList, KeyboardAvoidingView, Platform, StyleSheet, Pressable, ActivityIndicator, Animated, Image } from 'react-native';
 import { TypingAnimation } from 'react-native-typing-animation';
 import api from '../../src/services/http';  // API do seu back-end
 import Ionicons from '@expo/vector-icons/Ionicons';
-
+import { getAuth } from "firebase/auth";
+import { getDatabase, ref, onValue } from "firebase/database";
 const ChatScreen = () => {
   const [messages, setMessages] = useState([]);  // Inicia com um array vazio
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const flatListRef = useRef(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
-
+  const [perfilData, setPerfilData] = useState(null);
   const fadeIn = () => {
     Animated.timing(fadeAnim, {
       toValue: 1,
@@ -61,6 +62,37 @@ const ChatScreen = () => {
     }
   };
 
+    useEffect(() => {
+    const auth = getAuth();
+    const user = auth.currentUser;
+
+    if (user) {
+      const dbRef = ref(getDatabase(), `users/${user.uid}`);
+      const unsubscribe = onValue(dbRef, (snapshot) => {
+        if (snapshot.exists()) {
+          setPerfilData(snapshot.val());
+        } else {
+          console.log("Nenhum dado encontrado para o usuário logado");
+        }
+      });
+
+      return () => unsubscribe();
+    } else {
+      console.log("Usuário não autenticado");
+    }
+  }, []);
+  const getAvatarUrl = () => {
+    const { foto, nome } = perfilData || {};
+
+    if (foto && foto !== "") {
+      return foto;
+    } else {
+      return `https://avatar.iran.liara.run/public/girl?username=${encodeURIComponent(
+        nome || ""
+      )}`;
+    }
+  };
+
   const renderMessage = ({ item }) => (
     <View style={[
       styles.messageRow,
@@ -68,7 +100,7 @@ const ChatScreen = () => {
     ]}>
       {item.sender === 'bot' && (
         <Image
-          source={{ uri: 'https://ui-avatars.com/api/?name=Bot&background=E9ECEF&color=000' }}
+          source={require('../../src/assets/chatzin.png')}
           style={styles.avatar}
         />
       )}
@@ -87,7 +119,7 @@ const ChatScreen = () => {
       </View>
       {item.sender === 'user' && (
         <Image
-          source={{ uri: 'https://ui-avatars.com/api/?name=User&background=9344fa&color=fff' }}
+          source={{ uri: getAvatarUrl() }}
           style={styles.avatar}
         />
       )}
@@ -111,7 +143,7 @@ const ChatScreen = () => {
     >
       <View style={styles.messageRow}>
         <Image
-          source={{ uri: 'https://ui-avatars.com/api/?name=Bot&background=E9ECEF&color=000' }}
+          source={require('../../src/assets/chatzin.png')}
           style={styles.avatar}
         />
         <View style={styles.typingIndicatorBubble}>

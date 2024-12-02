@@ -9,13 +9,13 @@ import {
   Alert,
   Modal,
   Pressable,
+  TouchableWithoutFeedback,
 } from "react-native";
 import { useRoute } from "@react-navigation/native";
 import { getDatabase, get, ref, child, update } from "firebase/database";
 import { getAuth, signOut } from "firebase/auth";
 import * as SecureStore from "expo-secure-store";
 import { Linking } from "react-native";
-
 import {
   getStorage,
   uploadBytesResumable,
@@ -42,24 +42,20 @@ const Perfil = ({ navigation }) => {
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
-    (async () => {
-      try {
-        const { status } =
-          await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (status !== "granted") {
-          Alert.alert(
-            "Permissão necessária",
-            "Por favor, conceda permissão para acessar a galeria de fotos para carregar uma imagem de perfil."
-          );
-        }
-      } catch (error) {
-        console.error(
-          "Erro ao obter permissões da biblioteca de mídia:",
-          error
+  (async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert(
+          "Permissão necessária",
+          "Por favor, conceda permissão para acessar a galeria de fotos para carregar uma imagem de perfil."
         );
       }
-    })();
-  }, []);
+    } catch (error) {
+      console.error("Erro ao obter permissões da biblioteca de mídia:", error);
+    }
+  })();
+}, []);
 
   useEffect(() => {
     fetchUserProfile();
@@ -97,26 +93,6 @@ const Perfil = ({ navigation }) => {
       setLocation("Localização não disponível");
     }
   };
-  const fetchCurrentLocation = async () => {
-    try {
-      let { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") {
-        throw new Error("Permissão de localização não concedida");
-      }
-
-      let location = await Location.getCurrentPositionAsync({});
-      setLocation(`${location.coords.latitude}, ${location.coords.longitude}`);
-    } catch (error) {
-      console.error("Erro ao obter coordenadas do usuário:", error);
-      setLocation("Localização não disponível");
-    }
-  };
-
-  // Use this function when you need to fetch the location
-  const handleFetchLocation = () => {
-    fetchCurrentLocation();
-  };
-
   const getLocationCoordinates = async () => {
     try {
       let { status } = await Location.requestForegroundPermissionsAsync();
@@ -158,104 +134,95 @@ const Perfil = ({ navigation }) => {
     }
   };
 
-  const fetchLocation = async () => {
+const pickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+        Alert.alert('Permissão negada', 'O aplicativo precisa de permissão para acessar a galeria.');
+        return;
+    }
     try {
-      let { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") {
-        throw new Error("Permissão de localização não concedida");
-      }
-
-      let location = await Location.getCurrentPositionAsync({});
-      setLocation(`${location.coords.latitude}, ${location.coords.longitude}`);
+        const result = await ImagePicker.launchImageLibraryAsync({
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 1,
+        });
+        if (!result.canceled) {
+            setImage(result.assets[0].uri);
+            await uploadImage(result.assets[0].uri);
+        }
     } catch (error) {
-      console.error("Erro ao obter coordenadas do usuário:", error);
-      setLocation("Localização não disponível");
+        console.log(error);
     }
-  };
+};
 
-  const pickImage = async () => {
-    try {
-      let result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ["Images"],
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 1,
-      });
 
-      if (!result.cancelled) {
-        console.log(result.assets[0].uri);
-        setImage(result.assets[0].uri);
-        await uploadImage(result.assets[0].uri);
-      }
-    } catch (E) {
-      console.log(E);
+const takePhoto = async () => {
+  const { status } = await ImagePicker.requestCameraPermissionsAsync();
+  if (status !== 'granted') {
+    Alert.alert('Permiss o negada', 'O aplicativo precisa de permiss o para acessar a c mera.');
+    return;
+  }
+  try {
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 1,
+    });
+    if (!result.canceled) {
+      setImage(result.assets[0].uri);
+      await uploadImage(result.assets[0].uri);
     }
-  };
-
-  const takePhoto = async () => {
-    try {
-      const result = await ImagePicker.launchCameraAsync({
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 1,
-      });
-      if (!result.cancelled) {
-        setImage(result.assets[0].uri);
-        await uploadImage(result.assets[0].uri);
-      }
-    } catch (error) {
-      console.error("Error taking photo:", error);
-    }
-  };
+  } catch (error) {
+    console.error("Error taking photo:", error);
+  }
+};
 
   const uploadImage = async (uri) => {
-    try {
-      if (!uri) return;
-      setUploading(true);
-      const auth = getAuth();
-      const user = auth.currentUser;
-      const storage = getStorage();
-      const storageRef = sRef(storage, "fotos/" + Date.now() + user.uid);
-      const response = await fetch(uri);
-      const blob = await response.blob();
+  try {
+    if (!uri) return;
+    setUploading(true);
+    const auth = getAuth();
+    const user = auth.currentUser;
+    const storage = getStorage();
+    const storageRef = sRef(storage, "fotos/" + Date.now() + user.uid);
+    const response = await fetch(uri);
+    const blob = await response.blob();
 
-      const uploadTask = uploadBytesResumable(storageRef, blob);
+    const uploadTask = uploadBytesResumable(storageRef, blob);
 
-      uploadTask.on(
-        "state_changed",
-        (snapshot) => {
-          const progress =
-            (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-          setProgress(progress / 100); // Update progress
-          console.log("Upload is " + progress + "% done");
-        },
-        (error) => {
-          console.error("Error uploading image:", error);
-          setUploading(false);
-        },
-        () => {
-          getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
-            console.log("File available at", downloadURL);
-            update(ref(getDatabase(), `users/${user.uid}`), {
-              foto: downloadURL,
+    uploadTask.on(
+      "state_changed",
+      (snapshot) => {
+        const progress =
+          (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+        setProgress(progress / 100);
+      },
+      (error) => {
+        console.error("Error uploading image:", error);
+        setUploading(false);
+      },
+      () => {
+        getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
+          update(ref(getDatabase(), `users/${user.uid}`), {
+            foto: downloadURL,
+          })
+            .then(() => {
+              setUploading(false);
+              setUploaded(true);
+              fetchUserProfile();
             })
-              .then(() => {
-                setUploading(false);
-                setUploaded(true);
-                fetchUserProfile();
-              })
-              .catch((error) => {
-                console.error("Error updating user data:", error);
-                setUploading(false);
-              });
-          });
-        }
-      );
-    } catch (error) {
-      console.error("Error uploading image:", error);
-      setUploading(false);
-    }
-  };
+            .catch((error) => {
+              console.error("Error updating user data:", error);
+              setUploading(false);
+            });
+        });
+      }
+    );
+  } catch (error) {
+    console.error("Error uploading image:", error);
+    setUploading(false);
+  }
+};
 
   const handleDataUser = () => {
     navigation.navigate("Dados do Usúario");
@@ -420,41 +387,41 @@ const Perfil = ({ navigation }) => {
         </TouchableOpacity>
       </View>
 
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={modalVisible}
-        onRequestClose={() => {
-          setModalVisible(!modalVisible);
-        }}
-      >
-        <View
-          style={styles.modalContainer}
-          onTouchStart={() => setModalVisible(false)}
-        >
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Escolha uma opção: </Text>
-            <Pressable style={styles.modalOption} onPress={takePhoto}>
-              <Ionicons name="camera-outline" size={24} color="#fff" />
-              <Text style={styles.modalOptionText}>Tirar Foto</Text>
-            </Pressable>
-            <Pressable style={styles.modalOption} onPress={pickImage}>
-              <Ionicons name="images-outline" size={24} color="#fff" />
-              <Text style={styles.modalOptionText}>Escolher da Galeria</Text>
-            </Pressable>
-            <Pressable
-              style={[styles.modalOption, styles.modalOptionRemove]}
-              onPress={() => {
-                setModalVisible(!modalVisible);
-                removePhoto();
-              }}
-            >
-              <Ionicons name="trash-outline" size={24} color="#fff" />
-              <Text style={styles.modalOptionText}>Remover Foto</Text>
-            </Pressable>
-          </View>
-        </View>
-      </Modal>
+      
+<Modal
+  animationType="slide"
+  transparent={true}
+  visible={modalVisible}
+  onRequestClose={() => setModalVisible(!modalVisible)}
+>
+  <TouchableWithoutFeedback onPress={() => setModalVisible(false)}>
+    <View style={styles.modalContainer}>
+      <View style={styles.modalContent}>
+        <Text style={styles.modalTitle}>Escolha uma opção: </Text>
+        <TouchableOpacity style={styles.modalOption} onPress={takePhoto}>
+          <Ionicons name="camera-outline" size={24} color="#fff" />
+          <Text style={styles.modalOptionText}>Tirar Foto</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.modalOption} onPress={pickImage}>
+          <Ionicons name="images-outline" size={24} color="#fff" />
+          <Text style={styles.modalOptionText}>Escolher da Galeria</Text>
+        </TouchableOpacity>
+        {image && (
+          <Pressable
+            style={[styles.modalOption, styles.modalOptionRemove]}
+            onPress={() => {
+              setModalVisible(!modalVisible);
+              removePhoto();
+            }}
+          >
+            <Ionicons name="trash-outline" size={24} color="#fff" />
+            <Text style={styles.modalOptionText}>Remover Foto</Text>
+          </Pressable>
+        )}
+      </View>
+    </View>
+  </TouchableWithoutFeedback>
+</Modal>
     </ScrollView>
   );
 };

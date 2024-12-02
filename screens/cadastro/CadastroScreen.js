@@ -7,6 +7,8 @@ import {
   StyleSheet,
   ScrollView,
   ImageBackground,
+  Modal,
+  FlatList,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -19,6 +21,32 @@ const CadastroStepOne = ({ navigation }) => {
   const [cpfValido, setCpfValido] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
 
+  // Novos estados para cor e gênero
+  const [corIdentificacao, setCorIdentificacao] = useState("");
+  const [generoIdentificacao, setGeneroIdentificacao] = useState("");
+  const [isCorModalVisible, setIsCorModalVisible] = useState(false);
+  const [isGeneroModalVisible, setIsGeneroModalVisible] = useState(false);
+
+  // Opções para cor e gênero
+  const coresIdentificacao = [
+    "Branca", 
+    "Preta", 
+    "Parda", 
+    "Amarela", 
+    "Indígena", 
+    "Prefiro não declarar"
+  ];
+
+  const generosIdentificacao = [
+    "Homem Cisgênero",
+    "Mulher Cisgênero", 
+    "Homem Transgênero",
+    "Mulher Transgênero",
+    "Não Binário",
+    "Outro",
+    "Prefiro não declarar"
+  ];
+
   useEffect(() => {
     if (errorMessage) {
       const timer = setTimeout(() => {
@@ -30,7 +58,8 @@ const CadastroStepOne = ({ navigation }) => {
 
   const handleNext = () => {
     const allFieldsFilled =
-      nome && sobrenome && dataNascimento && telefone && cpf;
+      nome && sobrenome && dataNascimento && telefone && cpf && 
+      corIdentificacao && generoIdentificacao;
 
     if (!allFieldsFilled) {
       setErrorMessage("Preencha todos os campos obrigatórios!");
@@ -77,6 +106,8 @@ const CadastroStepOne = ({ navigation }) => {
       dataNascimento: birthDate.toISOString().split("T")[0],
       telefone,
       cpf,
+      corIdentificacao,
+      generoIdentificacao
     });
   };
 
@@ -137,6 +168,18 @@ const CadastroStepOne = ({ navigation }) => {
     setDataNascimento(data);
   };
 
+  const renderModalItem = (item, onSelect, onClose) => (
+    <TouchableOpacity 
+      style={styles.modalItem}
+      onPress={() => {
+        onSelect(item);
+        onClose();
+      }}
+    >
+      <Text style={styles.modalItemText}>{item}</Text>
+    </TouchableOpacity>
+  );
+
   return (
     <ImageBackground
       source={require("../../src/assets/BackgroundNovo.png")}
@@ -150,6 +193,8 @@ const CadastroStepOne = ({ navigation }) => {
           <Ionicons name="arrow-back" size={24} color="black" />
           <Text style={styles.backText}>Voltar</Text>
         </TouchableOpacity>
+        
+        {/* Campos originais mantidos */}
         <View style={styles.inputContainer}>
           <Text style={styles.label}>Nome</Text>
           <TextInput
@@ -206,6 +251,91 @@ const CadastroStepOne = ({ navigation }) => {
             placeholderTextColor="white"
           />
         </View>
+
+        {/* Novo campo de Cor de Identificação */}
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Cor de Identificação</Text>
+          <TouchableOpacity 
+            style={styles.input}
+            onPress={() => setIsCorModalVisible(true)}
+          >
+            <Text style={corIdentificacao ? styles.selectedText : styles.placeholderText}>
+              {corIdentificacao || "Selecione a cor"}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Novo campo de Gênero de Identificação */}
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Gênero de Identificação</Text>
+          <TouchableOpacity 
+            style={styles.input}
+            onPress={() => setIsGeneroModalVisible(true)}
+          >
+            <Text style={generoIdentificacao ? styles.selectedText : styles.placeholderText}>
+              {generoIdentificacao || "Selecione o gênero"}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Modal para seleção de Cor */}
+        <Modal
+          transparent={true}
+          visible={isCorModalVisible}
+          animationType="slide"
+          onRequestClose={() => setIsCorModalVisible(false)}
+        >
+          <View style={styles.modalContainer}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Selecione a Cor</Text>
+              <FlatList
+                data={coresIdentificacao}
+                renderItem={({ item }) => renderModalItem(
+                  item, 
+                  setCorIdentificacao, 
+                  () => setIsCorModalVisible(false)
+                )}
+                keyExtractor={(item) => item}
+              />
+              <TouchableOpacity 
+                style={styles.modalCancelButton}
+                onPress={() => setIsCorModalVisible(false)}
+              >
+                <Text style={styles.modalCancelText}>Cancelar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Modal para seleção de Gênero */}
+        <Modal
+          transparent={true}
+          visible={isGeneroModalVisible}
+          animationType="slide"
+          onRequestClose={() => setIsGeneroModalVisible(false)}
+        >
+          <View style={styles.modalContainer}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Selecione o Gênero</Text>
+              <FlatList
+                data={generosIdentificacao}
+                renderItem={({ item }) => renderModalItem(
+                  item, 
+                  setGeneroIdentificacao, 
+                  () => setIsGeneroModalVisible(false)
+                )}
+                keyExtractor={(item) => item}
+              />
+              <TouchableOpacity 
+                style={styles.modalCancelButton}
+                onPress={() => setIsGeneroModalVisible(false)}
+              >
+                <Text style={styles.modalCancelText}>Cancelar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+
         {errorMessage !== "" && (
           <Text style={styles.errorMessage}>{errorMessage}</Text>
         )}
@@ -238,6 +368,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
     color: "white",
+
   },
   input: {
     height: 40,
@@ -246,6 +377,13 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     paddingHorizontal: 10,
     color: "white",
+    justifyContent: "center",
+  },
+  placeholderText: {
+    color: "#fff",
+  },
+  selectedText: {
+    color: "#fff",
   },
   button: {
     backgroundColor: "white",
@@ -264,7 +402,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     width: "100%",
     paddingVertical: 20,
-    marginBottom: 150,
+    marginBottom: 100,
     paddingHorizontal: 15,
   },
   backText: {
@@ -280,6 +418,43 @@ const styles = StyleSheet.create({
     resizeMode: "cover",
     justifyContent: "center",
   },
+  // Novos estilos para os modais
+  // Modal styling updates
+modalContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.7)", // Slightly darker overlay
+},
+modalContent: {
+    width: "80%",
+    backgroundColor: "white",
+    borderRadius: 10,
+    padding: 20,
+    maxHeight: "70%",
+},
+modalTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 15,
+    textAlign: "center",
+},
+modalItem: {
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e0e0e0", // Light border for separation
+},
+modalCancelButton: {
+    marginTop: 15,
+    alignItems: "center",
+    paddingVertical: 10,
+    backgroundColor: "#f0f0f0", // A soft background for the cancel button
+    borderRadius: 5,
+},
+modalCancelText: {
+    fontSize: 16,
+    color: "#ff4040", // A red color for the cancel text
+},
 });
 
 export default CadastroStepOne;
