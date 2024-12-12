@@ -12,8 +12,8 @@ import {
   TouchableWithoutFeedback,
 } from "react-native";
 import { useRoute } from "@react-navigation/native";
-import { getDatabase, get, ref, child, update } from "firebase/database";
-import { getAuth, signOut } from "firebase/auth";
+import { getDatabase, get, ref, child, update, remove } from "firebase/database";
+import { getAuth, signOut, reauthenticateWithCredential, EmailAuthProvider } from "firebase/auth";
 import * as SecureStore from "expo-secure-store";
 import { Linking } from "react-native";
 import {
@@ -224,6 +224,60 @@ const takePhoto = async () => {
   }
 };
 
+const handleDeleteAccount = async () => {
+  try {
+    const auth = getAuth();
+    const user = auth.currentUser;
+
+    if (user) {
+      // Confirm deletion with the user
+      Alert.alert(
+        "Deletar Conta",
+        "Tem certeza de que deseja deletar sua conta? Esta ação não pode ser desfeita.",
+        [
+          {
+            text: "Cancelar",
+            style: "cancel",
+          },
+          {
+            text: "Deletar",
+            onPress: async () => {
+              try {
+                // Reautenticar o usuário, se necessário
+                const credential = EmailAuthProvider.credential(
+                  user.email,
+                  "suaSenha" // Substitua por uma forma de capturar a senha do usuário
+                );
+                await reauthenticateWithCredential(user, credential);
+
+                // Remover dados do Realtime Database
+                const dbref = ref(getDatabase(), `users/${user.uid}`);
+                await remove(dbref);
+
+                // Deletar a conta do usuário
+                await user.delete();
+
+                Alert.alert("Conta deletada", "Sua conta foi deletada com sucesso.");
+                navigation.navigate("LoginScreen");
+              } catch (deleteError) {
+                console.error("Erro ao deletar conta:", deleteError);
+                Alert.alert("Erro", "Não foi possível deletar a conta. Tente novamente.");
+              }
+            },
+            style: "destructive",
+          },
+        ],
+        { cancelable: false }
+      );
+    } else {
+      console.log("Usuário não autenticado");
+    }
+  } catch (error) {
+    console.error("Erro ao deletar conta:", error);
+    Alert.alert("Erro", "Não foi possível completar a ação.");
+  }
+};
+
   const handleDataUser = () => {
     navigation.navigate("Dados do Usúario");
   };
@@ -343,6 +397,18 @@ const takePhoto = async () => {
               <Text style={styles.profileDataText}>CPF: {perfilData.cpf}</Text>
             </View>
             <View style={styles.profileDataItem}>
+              <Ionicons name="call-outline" size={20} color="#fff" />
+              <Text style={styles.profileDataText}>CPF: {perfilData.telefone}</Text>
+            </View>
+            <View style={styles.profileDataItem}>
+              <Ionicons name="color-palette-outline" size={20} color="#fff" />
+              <Text style={styles.profileDataText}>Cor: {perfilData.corIdentificacao}</Text>
+            </View>
+            <View style={styles.profileDataItem}>
+              <Ionicons name="transgender-outline" size={20} color="#fff" />
+              <Text style={styles.profileDataText}>Gênero: {perfilData.generoIdentificacao}</Text>
+            </View>
+            <View style={styles.profileDataItem}>
               <Ionicons name="location-outline" size={20} color="#fff" />
               <Text style={styles.profileDataText}>
                 Cidade: {perfilData.cidade} - {perfilData.estado}
@@ -374,6 +440,10 @@ const takePhoto = async () => {
         <TouchableOpacity style={styles.button} onPress={handleLogout}>
           <Ionicons name="log-out-outline" size={20} color="#fff" />
           <Text style={styles.buttonText}>Log out</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.button} onPress={handleDeleteAccount}>
+          <Ionicons name="trash-outline" size={20} color="#fff" />
+          <Text style={styles.buttonText}>Deletar Conta</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.button} onPress={handleGoToMap}>
           {loadingMap ? (

@@ -33,7 +33,7 @@ const SegundaParte = () => {
   const [animation] = useState(new Animated.Value(0));
   const navigation = useNavigation();
   const route = useRoute();
-  const { nome, sobrenome, dataNascimento, cpf } = route.params;
+  const { nome, sobrenome, dataNascimento, cpf, telefone, corIdentificacao, generoIdentificacao } = route.params;
   const successTextRef = useRef(null);
 
   useEffect(() => {
@@ -166,6 +166,9 @@ const SegundaParte = () => {
           sobrenome,
           dataNascimento,
           cpf,
+          telefone,
+          corIdentificacao,
+          generoIdentificacao
         };
 
         await SecureStore.setItemAsync(

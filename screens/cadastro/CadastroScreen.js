@@ -38,12 +38,9 @@ const CadastroStepOne = ({ navigation }) => {
   ];
 
   const generosIdentificacao = [
-    "Homem Cisgênero",
-    "Mulher Cisgênero", 
-    "Homem Transgênero",
+    "Mulher Cisgênero",
     "Mulher Transgênero",
-    "Não Binário",
-    "Outro",
+    "Não Binária",
     "Prefiro não declarar"
   ];
 
@@ -389,7 +386,7 @@ const styles = StyleSheet.create({
     backgroundColor: "white",
     paddingHorizontal: 20,
     borderRadius: 5,
-    marginTop: 25,
+    marginTop: 20,
     paddingVertical: 8,
     flexDirection: "row",
     alignItems: "center", 
@@ -411,7 +408,6 @@ const styles = StyleSheet.create({
   },
   errorMessage: {
     color: "red",
-    marginBottom: 10,
   },
   backgroundImage: {
     flex: 1,
